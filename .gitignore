@@ -1,2 +1,5 @@
 # Ignore emacs backup files
 *~
+
+# ignore object files and archive files
+*.[oa]
