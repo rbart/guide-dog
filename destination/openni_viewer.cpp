@@ -46,6 +46,8 @@
 #include <pcl/console/parse.h>
 #include <pcl/console/time.h>
 #include <cmath> // for sqrt
+#include <cv.h>
+#include <assert.h>
 
 #define NORMALIZE 1
 
@@ -124,6 +126,10 @@ struct EventHelper
 
 int threshold = 0;
 
+// Callback sets this to true to indicate that recalibration of
+// the color pink should be performed.
+bool recalibrate = false;
+
 // Simple callbacks.
 void 
 keyboard_callback (const pcl::visualization::KeyboardEvent& event, void* cookie)
@@ -142,6 +148,11 @@ keyboard_callback (const pcl::visualization::KeyboardEvent& event, void* cookie)
   // begin my hacks
   if (event.keyDown() && event.getKeySym() == "Up") threshold += 10;
   else if (event.keyDown() && event.getKeySym() == "Down") threshold -= 10;
+
+  if (event.keyDown() && event.getKeyCode() == 32) {
+
+    recalibrate = true; 
+  }
 }
 
 void 
@@ -171,7 +182,7 @@ main (int argc, char** argv)
   }
 
   pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
-
+  printf("Initializing\n");
   double pinkR = 192.21; // RGB: (192.21,96.32,128.36) pink vector
   double pinkG = 96.32;
   double pinkB = 128.36;
@@ -242,10 +253,12 @@ main (int argc, char** argv)
       // threshold the resulting image
       // Compute the centroid of pixels that make it through the thresholded image.
       // If enough points make it through the filter, we say that the destination object is in the frame at the XYZ centroid.
+      int width = g_cloud->width;
+      int height = g_cloud->height;
 
       // compute the average RGB vector for points in the cloud
-      for (int x = 0; x < g_cloud->width; x++) {
-	for (int y = 0; y < g_cloud->height; y++) {
+      for (int x = 0; x < width; x++) {
+	for (int y = 0; y < height; y++) {
 	  const pcl::PointXYZRGBA p = g_cloud->at(x,y);
 	  double r = p.r;
 	  double g = p.g;
@@ -253,6 +266,8 @@ main (int argc, char** argv)
 
 	  // compute normalized rgb vector:
 	  double mag = sqrt(r*r+g*g+b*b);
+	  if (mag < 0.000001) mag = 1.0;
+
 
 	  r /= mag;
 	  g /= mag;
@@ -265,6 +280,13 @@ main (int argc, char** argv)
 	  double db = fabs(b-pinkB);
 	  
 	  double dmag = sqrt(dr*dr+dg*dg+db*db);
+	  
+	  if (!(dmag >= 0)) {
+	    printf("%.2f, %.2f, %.2f", dr, dg, db);
+	    cout.flush();
+	  }
+	  
+	  assert(dmag >= 0);
 
 	  //dotproduct /= (mag * pinkMag);
 	  //printf("%.02f\n", dotproduct);
@@ -274,6 +296,14 @@ main (int argc, char** argv)
 
       pcl::copyPointCloud(*g_cloud, *p_cloud);
 
+      // These values are used to help compute 
+      // an average RGB vector for pixels above threshold to help with recalibration.
+      float sumR = 0;
+      float sumG = 0;
+      float sumB = 0;
+      int numAvgRgb = 0;
+      // These values are used to help compute
+      // the centroid for pixels above threshold
       float sumX = 0;
       float sumY = 0;
       float sumZ = 0;
@@ -296,11 +326,24 @@ main (int argc, char** argv)
 
 	  if (testColor <= threshold) testColor = 0.0;
 	  else {
-	    if (p.x == p.x) sumX += p.x;
-	    if (p.y == p.y) sumY += p.y;
-	    if (p.z == p.z) sumZ += p.z;
-	    numAvg++;
+	    if (p.x == p.x && p.y == p.y && p.z == p.z) {
+	      sumX += p.x;
+	      sumY += p.y;
+	      sumZ += p.z;
+	      numAvg++;
+	    }
 	  }
+	  // only compute avg RGB vals for pixels near center of frame
+	  //bool inCenterX = x >= (3*width)/8 && x <= (3*width)/8;
+	  //bool inCenterY = y >= (3*height)/8 && y <= (3*height)/8;
+	  bool inCenter = true;//inCenterX && inCenterY;
+	  if (inCenter && p.r == p.r && p.g == p.g && p.b == p.b) {
+	    sumR += p.r;
+	    sumG += p.g;
+	    sumB += p.b;
+	    numAvgRgb++;
+	  }
+	  
 
 	  p.r = testColor;
 	  p.g = testColor;
@@ -308,11 +351,23 @@ main (int argc, char** argv)
 	 }
       }
 
-      float avgX = sumX/numAvg;
-      float avgY = sumY/numAvg;
-      float avgZ = sumZ/numAvg;
+      double avgX = sumX/numAvg;
+      double avgY = sumY/numAvg;
+      double avgZ = sumZ/numAvg;
+      double avgR = sumR/numAvgRgb;
+      double avgG = sumG/numAvgRgb;
+      double avgB = sumB/numAvgRgb;
 
       printf("Avg (%d) = (%.2f, %.2f, %.2f)\n", numAvg, avgX, avgY, avgZ);
+
+      if (recalibrate) {
+	printf("Recalibrating from %d pts to (R,G,B) of (%.2f, %.2f, %.2f)\n", numAvgRgb, avgR, avgG, avgB);
+	recalibrate = false;
+	pinkR = avgR; 
+	pinkG = avgG;
+	pinkB = avgB;
+	pinkMag = sqrt(pinkR*pinkR+pinkG*pinkG+pinkB*pinkB);
+      }
 
       pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
       if (!cld->updatePointCloud (p_cloud, handler, "OpenNICloud"))
