@@ -46,12 +46,11 @@
 #include <pcl/console/parse.h>
 #include <pcl/console/time.h>
 #include <cmath> // for sqrt
-#include <cv.h>
-#include <assert.h>
+#include <opencv/cv.h>
+#include <cassert>
+#include "../../sonic-dog/sonic_dog.h"
 
-#define NORMALIZE 1
-
-#define SHOW_FPS 1
+#define SHOW_FPS 0
 #if SHOW_FPS
 #define FPS_CALC(_WHAT_) \
 do \
@@ -77,8 +76,6 @@ do \
 boost::mutex cld_mutex, img_mutex;
 pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr g_cloud;
 boost::shared_ptr<openni_wrapper::Image> g_image;
-
-
 
 
 void
@@ -124,11 +121,15 @@ struct EventHelper
 #endif  
 };
 
-int threshold = 0;
+int frameSkipCount = 5;
+int threshold = 150;
+int minCount = 4000;
 
 // Callback sets this to true to indicate that recalibration of
 // the color pink should be performed.
 bool recalibrate = false;
+
+bool shift = false;
 
 // Simple callbacks.
 void 
@@ -145,9 +146,14 @@ keyboard_callback (const pcl::visualization::KeyboardEvent& event, void* cookie)
   else
     cout << " released" << endl;
 
-  // begin my hacks
-  if (event.keyDown() && event.getKeySym() == "Up") threshold += 10;
-  else if (event.keyDown() && event.getKeySym() == "Down") threshold -= 10;
+  if (event.keyDown() && (event.getKeySym() == "Shift_L" || event.getKeySym() == "Shift_R")) shift = true;   
+  if (event.keyUp() && (event.getKeySym() == "Shift_L" || event.getKeySym() == "Shift_R")) shift = false;   
+
+  if (event.keyDown() && event.getKeySym() == "Up") if (shift) threshold += 1; else threshold += 10;
+  else if (event.keyDown() && event.getKeySym() == "Down") if (shift) threshold += 1; else threshold -= 10;
+
+  if (event.keyDown() && event.getKeySym() == "Right") if (shift) minCount += 500; else minCount += 2000;
+  else if (event.keyDown() && event.getKeySym() == "Left") if (shift) minCount -= 500; else minCount -= 2000;
 
   if (event.keyDown() && event.getKeyCode() == 32) {
 
@@ -181,9 +187,11 @@ main (int argc, char** argv)
     }
   }
 
+  SonicDog dog(1);
+
   pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
   printf("Initializing\n");
-  double pinkR = 192.21; // RGB: (192.21,96.32,128.36) pink vector
+  double pinkR = 192.21;
   double pinkG = 96.32;
   double pinkB = 128.36;
   double pinkMag = sqrt(pinkR*pinkR+pinkG*pinkG+pinkB*pinkB);
@@ -223,6 +231,8 @@ main (int argc, char** argv)
 #endif 
   
   interface->start ();
+  int beacon = -1;
+  int frameNum = 0;
   bool cld_init = false;
   // Loop
   while (!cld->wasStopped ())
@@ -233,7 +243,9 @@ main (int argc, char** argv)
     img->spinOnce ();
 #endif
     FPS_CALC ("drawing");
-
+    
+    frameNum++;
+    
     // Add the cloud
     if (g_cloud && cld_mutex.try_lock ())
     {
@@ -266,8 +278,7 @@ main (int argc, char** argv)
 
 	  // compute normalized rgb vector:
 	  double mag = sqrt(r*r+g*g+b*b);
-	  if (mag < 0.000001) mag = 1.0;
-
+	  if (mag < 0.0001) mag = 0.0001;
 
 	  r /= mag;
 	  g /= mag;
@@ -280,16 +291,9 @@ main (int argc, char** argv)
 	  double db = fabs(b-pinkB);
 	  
 	  double dmag = sqrt(dr*dr+dg*dg+db*db);
+	  double magDiff = fabs(mag - pinkMag);
+	  if (magDiff > 192) dmag = 1;
 	  
-	  if (!(dmag >= 0)) {
-	    printf("%.2f, %.2f, %.2f", dr, dg, db);
-	    cout.flush();
-	  }
-	  
-	  assert(dmag >= 0);
-
-	  //dotproduct /= (mag * pinkMag);
-	  //printf("%.02f\n", dotproduct);
 	  dvalues[y*g_cloud->width + x] = dmag;
 	}
       }
@@ -334,9 +338,9 @@ main (int argc, char** argv)
 	    }
 	  }
 	  // only compute avg RGB vals for pixels near center of frame
-	  //bool inCenterX = x >= (3*width)/8 && x <= (3*width)/8;
-	  //bool inCenterY = y >= (3*height)/8 && y <= (3*height)/8;
-	  bool inCenter = true;//inCenterX && inCenterY;
+	  bool inCenterX = x >= (7*width)/16 && x <= (9*width)/16;
+	  bool inCenterY = y >= (7*height)/16 && y <= (9*height)/16;
+	  bool inCenter = inCenterX && inCenterY;
 	  if (inCenter && p.r == p.r && p.g == p.g && p.b == p.b) {
 	    sumR += p.r;
 	    sumG += p.g;
@@ -358,15 +362,38 @@ main (int argc, char** argv)
       double avgG = sumG/numAvgRgb;
       double avgB = sumB/numAvgRgb;
 
-      printf("Avg (%d) = (%.2f, %.2f, %.2f)\n", numAvg, avgX, avgY, avgZ);
+      //      printf("Avg (%d) = (%.2f, %.2f, %.2f)\n", numAvg, avgX, avgY, avgZ);
+      
+      bool frameSkip = frameNum % frameSkipCount != 0;
+      bool haveBeacon = numAvg >= minCount;
+
+      if (!frameSkip) printf("Count: %d, Min Count: %d, Min similarity: %d, Beacon ID: %d\n", numAvg, minCount, threshold, beacon);
+      
+      if (beacon == -1 && haveBeacon) {
+	beacon = dog.addBeacon(8*avgX, 2*avgZ);
+	dog.start();
+      } 
+      else if (beacon != -1 && !haveBeacon) {
+        dog.removeObject(beacon);
+	beacon = -1;
+      } 
+      else if (!frameSkip == 0 && haveBeacon && beacon != -1) {
+        dog.changeObjectLoc(beacon,8*avgX, 2*avgZ);
+      }
+
+// if enough points, etc
+      
 
       if (recalibrate) {
 	printf("Recalibrating from %d pts to (R,G,B) of (%.2f, %.2f, %.2f)\n", numAvgRgb, avgR, avgG, avgB);
 	recalibrate = false;
 	pinkR = avgR; 
-	pinkG = avgG;
+        pinkG = avgG;
 	pinkB = avgB;
 	pinkMag = sqrt(pinkR*pinkR+pinkG*pinkG+pinkB*pinkB);
+	pinkR /= pinkMag;
+	pinkG /= pinkMag;
+	pinkB /= pinkMag;
       }
 
       pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
