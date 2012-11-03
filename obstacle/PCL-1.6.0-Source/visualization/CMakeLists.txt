@@ -1,6 +1,6 @@
 set(SUBSYS_NAME visualization)
 set(SUBSYS_DESC "Point cloud visualization library")
-set(SUBSYS_DEPS common io kdtree geometry search)
+set(SUBSYS_DEPS common io kdtree geometry search sample_consensus segmentation)
 
 if(NOT VTK_FOUND)
     set(DEFAULT FALSE)
@@ -93,9 +93,9 @@ if(build)
     endif(APPLE)
     
     if("${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION}" VERSION_LESS "5.6")
-      target_link_libraries(${LIB_NAME} pcl_common pcl_io pcl_kdtree vtkCommon vtkWidgets vtkHybrid vtkFiltering vtkRendering ${OPENGL_LIBRARIES})
+      target_link_libraries(${LIB_NAME} pcl_common pcl_io pcl_kdtree pcl_segmentation vtkCommon vtkWidgets vtkHybrid vtkFiltering vtkRendering ${OPENGL_LIBRARIES})
     else()
-      target_link_libraries(${LIB_NAME} pcl_common pcl_io pcl_kdtree vtkCommon vtkWidgets vtkHybrid vtkCharts vtkFiltering vtkRendering ${OPENGL_LIBRARIES})
+      target_link_libraries(${LIB_NAME} pcl_common pcl_io pcl_kdtree pcl_segmentation vtkCommon vtkWidgets vtkHybrid vtkCharts vtkFiltering vtkRendering ${OPENGL_LIBRARIES})
     endif()
 
     set(EXT_DEPS "")
