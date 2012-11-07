@@ -38,7 +38,6 @@
 #include <boost/thread/thread.hpp>
 #define MEASURE_FUNCTION_TIME
 #include <pcl/common/time.h> //fps calculations
-#include <pcl/common/transforms.h>
 #include <pcl/io/openni_grabber.h>
 #include <pcl/visualization/point_cloud_handlers.h>
 #include <pcl/visualization/pcl_visualizer.h>
@@ -46,9 +45,6 @@
 #include <pcl/console/print.h>
 #include <pcl/console/parse.h>
 #include <pcl/console/time.h>
-#include <pcl/point_types.h>
-#include <pcl/sample_consensus/method_types.h>
-#include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
 #define SHOW_FPS 1
@@ -105,45 +101,7 @@ struct EventHelper
   {
     FPS_CALC ("callback");
     cld_mutex.lock ();
-
-    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-    // Create the segmentation object
-    pcl::SACSegmentation<pcl::PointXYZRGBA> seg;
-    seg.setOptimizeCoefficients (true);
-    seg.setModelType (pcl::SACMODEL_PLANE);
-    seg.setMethodType (pcl::SAC_RANSAC);
-    seg.setDistanceThreshold (0.02);
-    seg.setInputCloud (cloud);
-    seg.segment (*inliers, *coefficients);
-
-    cout << "plane:" << endl;
-    for (std::vector<float>::iterator i = coefficients->values.begin();
-	 i != coefficients->values.end();
-	 ++i)
-      {
-	cout << "\t" << *i << endl;
-      }
-    float a = coefficients->values[0];
-    float b = coefficients->values[1];
-    float c = coefficients->values[2];
-    float d = coefficients->values[3];
-
-    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
-
-    for (size_t x = 0; x < cloud->width; x++) {
-      for (size_t y = 0; y < cloud->height; y++) {
-	const pcl::PointXYZRGBA &p = cloud->at(x,y);
-
-	if (fabs(a * p.x + b * p.y + c * p.z + d) > .1) {
-	  p_cloud->push_back(p);
-	}
-      }
-    }
-    p_cloud->width = cloud->width;
-    p_cloud->height = cloud->height;
-
-    g_cloud = p_cloud;
+    g_cloud = cloud;
     cld_mutex.unlock ();
   }
 
@@ -250,10 +208,47 @@ main (int argc, char** argv)
         cld_init = !cld_init;
       }
 
-      pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (g_cloud);
-      if (!cld->updatePointCloud (g_cloud, handler, "OpenNICloud"))
+      pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+      pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+      // Create the segmentation object
+      pcl::SACSegmentation<pcl::PointXYZRGBA> seg;
+      seg.setOptimizeCoefficients (true);
+      seg.setModelType (pcl::SACMODEL_PLANE);
+      seg.setMethodType (pcl::SAC_RANSAC);
+      seg.setDistanceThreshold (0.02);
+      seg.setInputCloud (g_cloud);
+      seg.segment (*inliers, *coefficients);
+
+      cout << "plane:" << endl;
+      for (std::vector<float>::iterator i = coefficients->values.begin();
+           i != coefficients->values.end();
+           ++i)
+        {
+          cout << "\t" << *i << endl;
+        }
+      float a = coefficients->values[0];
+      float b = coefficients->values[1];
+      float c = coefficients->values[2];
+      float d = coefficients->values[3];
+
+      pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
+
+      for (size_t x = 0; x < g_cloud->width; x++) {
+        for (size_t y = 0; y < g_cloud->height; y++) {
+          const pcl::PointXYZRGBA &p = g_cloud->at(x,y);
+
+          if (fabs(a * p.x + b * p.y + c * p.z + d) > .05) {
+            p_cloud->push_back(p);
+          }
+        }
+      }
+      p_cloud->width = g_cloud->width;
+      p_cloud->height = g_cloud->height;
+
+      pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
+      if (!cld->updatePointCloud (p_cloud, handler, "OpenNICloud"))
       {
-        cld->addPointCloud (g_cloud, handler, "OpenNICloud");
+        cld->addPointCloud (p_cloud, handler, "OpenNICloud");
         cld->resetCameraViewpoint ("OpenNICloud");
       }
       cld_mutex.unlock ();
