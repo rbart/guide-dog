@@ -221,11 +221,11 @@ main (int argc, char** argv)
 
       cout << "plane:" << endl;
       for (std::vector<float>::iterator i = coefficients->values.begin();
-	   i != coefficients->values.end();
-	   ++i)
-	{
-	  cout << "\t" << *i << endl;
-	}
+           i != coefficients->values.end();
+           ++i)
+        {
+          cout << "\t" << *i << endl;
+        }
       float a = coefficients->values[0];
       float b = coefficients->values[1];
       float c = coefficients->values[2];
@@ -234,13 +234,13 @@ main (int argc, char** argv)
       pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
 
       for (size_t x = 0; x < g_cloud->width; x++) {
-	for (size_t y = 0; y < g_cloud->height; y++) {
-	  const pcl::PointXYZRGBA &p = g_cloud->at(x,y);
+        for (size_t y = 0; y < g_cloud->height; y++) {
+          const pcl::PointXYZRGBA &p = g_cloud->at(x,y);
 
-	  if (fabs(a * p.x + b * p.y + c * p.z + d) > .05) {
-	    p_cloud->push_back(p);
-	  }
-	}
+          if (fabs(a * p.x + b * p.y + c * p.z + d) > .05) {
+            p_cloud->push_back(p);
+          }
+        }
       }
       p_cloud->width = g_cloud->width;
       p_cloud->height = g_cloud->height;
