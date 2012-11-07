@@ -122,7 +122,7 @@ struct EventHelper
 };
 
 int frameSkipCount = 5;
-int threshold = 150;
+int threshold = 210;
 int minCount = 4000;
 
 // Callback sets this to true to indicate that recalibration of
@@ -150,7 +150,7 @@ keyboard_callback (const pcl::visualization::KeyboardEvent& event, void* cookie)
   if (event.keyUp() && (event.getKeySym() == "Shift_L" || event.getKeySym() == "Shift_R")) shift = false;   
 
   if (event.keyDown() && event.getKeySym() == "Up") if (shift) threshold += 1; else threshold += 10;
-  else if (event.keyDown() && event.getKeySym() == "Down") if (shift) threshold += 1; else threshold -= 10;
+  else if (event.keyDown() && event.getKeySym() == "Down") if (shift) threshold -= 1; else threshold -= 10;
 
   if (event.keyDown() && event.getKeySym() == "Right") if (shift) minCount += 500; else minCount += 2000;
   else if (event.keyDown() && event.getKeySym() == "Left") if (shift) minCount -= 500; else minCount -= 2000;
@@ -370,7 +370,7 @@ main (int argc, char** argv)
       if (!frameSkip) printf("Count: %d, Min Count: %d, Min similarity: %d, Beacon ID: %d\n", numAvg, minCount, threshold, beacon);
       
       if (beacon == -1 && haveBeacon) {
-	beacon = dog.addBeacon(8*avgX, 2*avgZ);
+	beacon = dog.addBeacon(12*avgX, 3*avgZ);
 	dog.start();
       } 
       else if (beacon != -1 && !haveBeacon) {
@@ -378,7 +378,7 @@ main (int argc, char** argv)
 	beacon = -1;
       } 
       else if (!frameSkip == 0 && haveBeacon && beacon != -1) {
-        dog.changeObjectLoc(beacon,8*avgX, 2*avgZ);
+        dog.changeObjectLoc(beacon,12*avgX, 3*avgZ);
       }
 
 // if enough points, etc
