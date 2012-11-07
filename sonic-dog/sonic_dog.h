@@ -30,6 +30,8 @@ public:
 	void alertObstacles( const CoordinateVect &obstacles, bool diff = false );
 	void startPlaying( void );
 	void removeObject( size_t id );
+	void pauseObject( size_t id );
+	void unpauseObject( size_t id );
 
 private:
 	typedef std::vector< ALuint > AluVect;
@@ -78,7 +80,10 @@ private:
 	pthread_mutex_t play_lock_;
 	pthread_mutex_t q_lock_;
 	pthread_cond_t empty_q_lock_;
-	pthread_mutex_t sound_map_lock_;
+	pthread_cond_t pause_cond_lock_;
+	pthread_mutex_t sources_lock_;
+	pthread_mutex_t remove_lock_;
+	pthread_mutex_t pause_lock_;
 
 	/// @brief A lock that requires the threads playing a sound only once to play 
 	//    them in succession instead of all at once.
@@ -88,6 +93,7 @@ private:
 	size_t object_id_;
 	SoundQ play_q_;
 	BoolMap removed_;
+	BoolMap paused_;
 
 	static void *worker_fn( void *data );
 	void (SonicDog::*func())() {

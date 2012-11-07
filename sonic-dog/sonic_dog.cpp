@@ -31,9 +31,12 @@ SonicDog::SonicDog( size_t threads ) {
 
 	// initialize the locks
 	pthread_mutex_init( &play_lock_, NULL );
-	pthread_mutex_init( &sound_map_lock_, NULL );
+	pthread_mutex_init( &sources_lock_, NULL );
+	pthread_mutex_init( &remove_lock_, NULL );
+	pthread_mutex_init( &pause_lock_, NULL );
 	pthread_mutex_init( &q_lock_, NULL );
 	pthread_cond_init( &empty_q_lock_, NULL );
+	pthread_cond_init( &pause_cond_lock_, NULL );
 	pthread_mutex_init( &turns_lock_, NULL );
 }
 
@@ -90,10 +93,19 @@ size_t SonicDog::addObject( float x, float z, obj_t type ) {
 	alSourcei( src->source, AL_BUFFER, src->buffer );
 
 	// insert the src into our map
-	pthread_mutex_lock( &sound_map_lock_ );
+	pthread_mutex_lock( &sources_lock_ );
 	sources_.insert( SoundMap::value_type( src->id, src ) );
+	pthread_mutex_unlock( &sources_lock_ );
+
+	// insert an entry for this source to our removed map
+	pthread_mutex_lock( &remove_lock_ );
 	removed_.insert( BoolMap::value_type( src->id, false ) );
-	pthread_mutex_unlock( &sound_map_lock_ );
+	pthread_mutex_unlock( &remove_lock_ );
+
+	// insert an entry for this source to our paused map
+	pthread_mutex_lock( &pause_lock_ );
+	paused_.insert( BoolMap::value_type( src->id, false ) );
+	pthread_mutex_unlock( &pause_lock_ );
 
 	// then insert it into the play queue
 	pthread_mutex_lock( &q_lock_ );
@@ -110,22 +122,25 @@ size_t SonicDog::addObject( float x, float z, obj_t type ) {
 }
 
 void SonicDog::changeObjectLoc( size_t id, float x, float z ) {
-	pthread_mutex_lock( &sound_map_lock_ );
+	pthread_mutex_lock( &sources_lock_ );
 	SoundMap::iterator beacon = sources_.find( id );
-	pthread_mutex_unlock( &sound_map_lock_ );
+	pthread_mutex_unlock( &sources_lock_ );
 	assert( beacon != sources_.end() );
 
 	alSource3f( beacon->second->source, AL_POSITION, x, 0.0f, z );
 }
 
 bool SonicDog::getSoundPosition( const size_t id, ALfloat *x, ALfloat *y, ALfloat *z ) {
+	pthread_mutex_lock( &sources_lock_ );
 	SoundMap::iterator object = sources_.find( id );
 
 	if ( object != sources_.end() ) {
 		alGetSource3f( object->second->source, AL_POSITION, x, y, z );
+		pthread_mutex_unlock( &sources_lock_ );
 
 		return true;
 	} else {
+		pthread_mutex_unlock( &sources_lock_ );
 		return false;
 	}
 }
@@ -174,10 +189,13 @@ void SonicDog::startPlaying() {
 		// there's stuff in the queue so pop off a source
 		SoundSrc *src = play_q_.front();
 		play_q_.pop();
-		// then release the lock on the queue
 		pthread_mutex_unlock( &q_lock_ );
 
 		once = src->once;
+
+		// figure out if this source is initially paused
+		pthread_mutex_unlock( &pause_lock_ );
+
 		do {
 			// play the sound at least once
 			if ( once ) pthread_mutex_lock( &turns_lock_ );
@@ -191,22 +209,35 @@ void SonicDog::startPlaying() {
 			pthread_mutex_unlock( &play_lock_ );
 
 			if ( !once ) {
-				pthread_mutex_lock( &sound_map_lock_ );
+				bool paused;
+				pthread_mutex_lock( &pause_lock_ );
+				BoolMap::iterator p = paused_.find( src->id );
+				assert( p != paused_.end() );
+				paused = p->second;
+				while ( paused ) {
+					pthread_cond_wait( &pause_cond_lock_, &pause_lock_ );
+					BoolMap::iterator p = paused_.find( src->id );
+					assert( p != paused_.end() );
+					paused = p->second;
+				}
+				pthread_mutex_unlock( &pause_lock_ );
+
+				pthread_mutex_lock( &remove_lock_ );
 				BoolMap::iterator cont = removed_.find( src->id );
 				if ( cont != removed_.end() ) {
 					removed = cont->second;
 				}
-				pthread_mutex_unlock( &sound_map_lock_ );
+				pthread_mutex_unlock( &remove_lock_ );
 			}
 		} while ( can_play && !once && !removed );
 
 		// remove this source from the source map if it's in there
-		pthread_mutex_lock( &sound_map_lock_ );
+		pthread_mutex_lock( &sources_lock_ );
 		SoundMap::iterator itr = sources_.find( src->id );
 		if ( itr != sources_.end() ) {
 			sources_.erase( itr );
 		}
-		pthread_mutex_unlock( &sound_map_lock_ );
+		pthread_mutex_unlock( &sources_lock_ );
 
 		// we're done with the source so clean it up
 		alDeleteSources( 1, &(src->source) );
@@ -343,10 +374,29 @@ void *SonicDog::worker_fn( void *data ) {
 }
 
 void SonicDog::removeObject( size_t id ) {
-	pthread_mutex_lock( &sound_map_lock_ );
+	pthread_mutex_lock( &remove_lock_ );
 	BoolMap::iterator src = removed_.find( id );
-	pthread_mutex_unlock( &sound_map_lock_ );
+	pthread_mutex_unlock( &remove_lock_ );
 	if ( src == removed_.end() ) return;
 
 	src->second = true;
+}
+
+void SonicDog::pauseObject( size_t id ) {
+	pthread_mutex_lock( &pause_lock_ );
+	BoolMap::iterator p = paused_.find( id );
+	if ( p != paused_.end() ) {
+		p->second = true;
+	}
+	pthread_mutex_unlock( &pause_lock_ );
+}
+
+void SonicDog::unpauseObject( size_t id ) {
+	pthread_mutex_lock( &pause_lock_ );
+	BoolMap::iterator p = paused_.find( id );
+	if ( p != paused_.end() ) {
+		p->second = false;
+	}
+	pthread_mutex_unlock( &pause_lock_ );
+	pthread_cond_broadcast( &pause_cond_lock_ );
 }
