@@ -38,7 +38,6 @@
 #include <boost/thread/thread.hpp>
 #define MEASURE_FUNCTION_TIME
 #include <pcl/common/time.h> //fps calculations
-#include <pcl/common/transforms.h>
 #include <pcl/io/openni_grabber.h>
 #include <pcl/visualization/point_cloud_handlers.h>
 #include <pcl/visualization/pcl_visualizer.h>
@@ -46,9 +45,6 @@
 #include <pcl/console/print.h>
 #include <pcl/console/parse.h>
 #include <pcl/console/time.h>
-#include <pcl/point_types.h>
-#include <pcl/sample_consensus/method_types.h>
-#include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
 #define SHOW_FPS 1
