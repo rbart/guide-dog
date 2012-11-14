@@ -67,6 +67,26 @@ void changePosition( int ch, SonicDog &sonny ) {
 	}
 }
 
+bool printAvailableIds( size_t &out ) {
+	printw( "Valid ids:" );
+	for ( size_t i = 0; i < objects.size(); i++ ) {
+		printw( " %zu", objects[i] );
+	}
+	printw( "\nOr type 'c' to cancel\n" );
+	refresh();
+	int input = ( getch() );
+
+	if ( input == 'c' ) {
+		return false;
+	}
+
+	char buf[2];
+	snprintf( buf, 2, "%c", input );	
+	int id = atoi( buf );
+	out = static_cast< size_t >( id );
+	return true;
+}
+
 void userInteract( SonicDog &sonny ) {
 	printw( "Navigate toward the sound beacon using the arrow keys\n" );
 	printw( "Press q to quit\n" );
@@ -74,6 +94,8 @@ void userInteract( SonicDog &sonny ) {
 	printw( "Press o to add an new obstacle\n" );
 	printw( "Press r to remove object by id\n" );
 	printw( "Press a to alert obstacles\n" );
+	printw( "Press p to pause an object\n" );
+	printw( "Press u to un-pause an object\n" );
 	refresh();
 
 	sonny.start();
@@ -110,25 +132,34 @@ void userInteract( SonicDog &sonny ) {
 				break;
 			}
 			case 'r': {
-				printw( "Valid ids:" );
-				for ( size_t i = 0; i < objects.size(); i++ ) {
-					printw( " %zu", objects[i] );
+				size_t id;
+				if ( printAvailableIds( id ) ) {
+					printw( "Deleting %zu\n", id );
+					refresh();
+					std::vector< size_t >::iterator itr = find( objects.begin(), objects.end(), id );
+					if ( itr != objects.end() ) objects.erase( itr );
+					sonny.removeObject( id );
 				}
-				printw( "\nOr type 'c' to cancel\n" );
-				refresh();
-				int input = ( getch() );
-				if ( input == 'c' ) break;
-				char buf[2];
-				snprintf( buf, 2, "%c", input );	
-				printw( "Deleting %s\n", buf );
-				refresh();
-				int id = atoi( buf );
-
-				std::vector< size_t >::iterator itr = find( objects.begin(), objects.end(), static_cast< size_t>( id ) );
-				if ( itr != objects.end() ) objects.erase( itr );
-
-				sonny.removeObject( static_cast< size_t >( id ) );
 				break;
+			}
+			case 'p': {
+				size_t id;
+				if ( printAvailableIds( id ) ) {
+					printw( "Pausing %zu\n", id );
+					refresh();
+
+					sonny.pauseObject( id );
+				}
+				break;
+			}
+			case 'u': {
+				size_t id;
+				if ( printAvailableIds( id ) ) {
+					printw( "Unpausing %zu\n", id );
+					refresh();
+
+					sonny.unpauseObject( id );
+				}
 			}
 			default: {
 				break;
