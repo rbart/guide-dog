@@ -234,6 +234,16 @@ main (int argc, char** argv)
   int beacon = -1;
   int frameNum = 0;
   bool cld_init = false;
+
+  int width = g_cloud->width;
+  int height = g_cloud->height;
+
+
+  IplImage * iimg = cvCreateImage(cvSize(width, height), IPL_DEPTH_32F, 3);
+  IplImage * dst = cvCreateImage(cvSize(width, height), IPL_DEPTH_32F, 3);
+  float * imgData = reinterpret_cast<float *>(iimg->imageData);
+  float * dstData = reinterpret_cast<float *>(dst->imageData);
+
   // Loop
   while (!cld->wasStopped ())
   {
@@ -257,47 +267,51 @@ main (int argc, char** argv)
         cld_init = !cld_init;
       }
 
+
       // check out OpenCV blob detection
 
-      // For each RGB value in the cloud,
-      // Normalize the magnitude of the RGB vector to one,
-      // Compute cosine similarity with pink vector
-      // threshold the resulting image
-      // Compute the centroid of pixels that make it through the thresholded image.
-      // If enough points make it through the filter, we say that the destination object is in the frame at the XYZ centroid.
-      int width = g_cloud->width;
-      int height = g_cloud->height;
-
-      // compute the average RGB vector for points in the cloud
+            // load img with the RGB data from the point cloud.
       for (int x = 0; x < width; x++) {
 	for (int y = 0; y < height; y++) {
 	  const pcl::PointXYZRGBA p = g_cloud->at(x,y);
-	  double r = p.r;
-	  double g = p.g;
-	  double b = p.b;
-
-	  // compute normalized rgb vector:
-	  double mag = sqrt(r*r+g*g+b*b);
-	  if (mag < 0.0001) mag = 0.0001;
-
-	  r /= mag;
-	  g /= mag;
-	  b /= mag;
-
-	  // compute cosine similarity with "pink" vector. 
-	  double dotproduct = r*pinkR + g*pinkG + b*pinkB;
-	  double dr = fabs(r-pinkR);
-	  double dg = fabs(g-pinkG);
-	  double db = fabs(b-pinkB);
-	  
-	  double dmag = sqrt(dr*dr+dg*dg+db*db);
-	  double magDiff = fabs(mag - pinkMag);
-	  if (magDiff > 192) dmag = 1;
-	  
-	  dvalues[y*g_cloud->width + x] = dmag;
+	  imgData[3*(y*width+x)+0] = p.r;
+	  imgData[3*(y*width+x)+1] = p.g;
+	  imgData[3*(y*width+x)+2] = p.b;
 	}
       }
 
+      cvCvtColor(iimg, dst, CV_RGB2HSV);
+
+      // compute similarity to "pink" in HSV
+      for (int x = 0; x < width; x++) {
+	for (int y = 0; y < height; y++) {
+	  
+	  double h = dstData[3*(y*width+x)+0];
+	  double s = dstData[3*(y*width+x)+1];
+	  double v = dstData[3*(y*width+x)+2];
+
+	  // compute normalized rgb vector:
+	  double mag = sqrt(h*h+s*s+v*v);
+	  if (mag < 0.0001) mag = 0.0001;
+
+	  h /= mag;
+	  s /= mag;
+	  v /= mag;
+
+	  // compute cosine similarity with "pink" vector. 
+	  double dotproduct = h*pinkR + s*pinkG + v*pinkB;
+	  double dh = fabs(h-pinkR);
+	  double ds = fabs(s-pinkG);
+	  double dv = fabs(v-pinkB);
+	  
+	  double dmag = sqrt(dh*dh+ds*ds+dv*dv);
+	  double magDiff = fabs(mag - pinkMag);
+	  if (magDiff > 192) dmag = 1;
+	  	
+	  dvalues[y*g_cloud->width + x] = dmag;
+	}
+      }
+      
       pcl::copyPointCloud(*g_cloud, *p_cloud);
 
       // These values are used to help compute 
@@ -325,7 +339,7 @@ main (int argc, char** argv)
         for (int y = 0; y < g_cloud->height; y++) {
 	  double testColor = (1.0-dvalues[y*g_cloud->width + x]) * 255;
 
-	  const pcl::PointXYZRGBA &g = g_cloud->at(x,y);
+	  const pcl::PointXYZRGBA &g = g_cloud->at(x,y);	  
 	  pcl::PointXYZRGBA &p = p_cloud->at(x,y);
 
 	  if (testColor <= threshold) testColor = 0.0;
@@ -347,8 +361,7 @@ main (int argc, char** argv)
 	    sumB += p.b;
 	    numAvgRgb++;
 	  }
-	  
-
+	  testColor = 0.5;
 	  p.r = testColor;
 	  p.g = testColor;
 	  p.b = testColor;
