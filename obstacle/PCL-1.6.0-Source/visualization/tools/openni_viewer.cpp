@@ -45,6 +45,7 @@
 #include <pcl/console/print.h>
 #include <pcl/console/parse.h>
 #include <pcl/console/time.h>
+#include <pcl/filters/extract_indices.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
 #define SHOW_FPS 1
@@ -226,24 +227,13 @@ main (int argc, char** argv)
         {
           cout << "\t" << *i << endl;
         }
-      float a = coefficients->values[0];
-      float b = coefficients->values[1];
-      float c = coefficients->values[2];
-      float d = coefficients->values[3];
 
       pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
-
-      for (size_t x = 0; x < g_cloud->width; x++) {
-        for (size_t y = 0; y < g_cloud->height; y++) {
-          const pcl::PointXYZRGBA &p = g_cloud->at(x,y);
-
-          if (fabs(a * p.x + b * p.y + c * p.z + d) > .05) {
-            p_cloud->push_back(p);
-          }
-        }
-      }
-      p_cloud->width = g_cloud->width;
-      p_cloud->height = g_cloud->height;
+      pcl::ExtractIndices<pcl::PointXYZRGBA> extract;
+      extract.setInputCloud (g_cloud);
+      extract.setIndices (inliers);
+      extract.setNegative (true);
+      extract.filter (*p_cloud);
 
       pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
       if (!cld->updatePointCloud (p_cloud, handler, "OpenNICloud"))
