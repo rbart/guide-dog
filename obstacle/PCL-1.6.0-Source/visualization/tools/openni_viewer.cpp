@@ -46,6 +46,7 @@
 #include <pcl/console/parse.h>
 #include <pcl/console/time.h>
 
+#include <boost/math/special_functions/fpclassify.hpp>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/project_inliers.h>
 #include <pcl/segmentation/sac_segmentation.h>
@@ -229,6 +230,16 @@ main (int argc, char** argv)
         {
           cout << "\t" << *i << endl;
         }
+
+      float a = coefficients->values[0];
+      float b = coefficients->values[1];
+      float c = coefficients->values[2];
+      float d = coefficients->values[3];
+
+      // Don't process the frame if a plane can't be found.
+      if (boost::math::isnan<float>(a) || boost::math::isnan<float>(b) || boost::math::isnan<float>(c) || boost::math::isnan<float>(d)) {
+        continue;
+      }
 
       pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
       pcl::ExtractIndices<pcl::PointXYZRGBA> extract;
