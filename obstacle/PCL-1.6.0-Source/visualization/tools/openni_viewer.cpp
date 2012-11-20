@@ -96,6 +96,7 @@ printHelp (int argc, char **argv)
 boost::shared_ptr<pcl::visualization::PCLVisualizer> cld;
 #if !((VTK_MAJOR_VERSION == 5)&&(VTK_MINOR_VERSION <= 4))
 boost::shared_ptr<pcl::visualization::ImageViewer> img;
+boost::shared_ptr<pcl::visualization::ImageViewer> img_2d;
 #endif
 
 struct EventHelper
@@ -179,6 +180,7 @@ main (int argc, char** argv)
 
 #if !((VTK_MAJOR_VERSION == 5)&&(VTK_MINOR_VERSION <= 4))
   img.reset (new pcl::visualization::ImageViewer ("OpenNI Viewer"));
+  img_2d.reset (new pcl::visualization::ImageViewer ("OpenNI Viewer - 2D"));
   // Register callbacks
   std::string keyMsg2D ("Key event for image viewer");
   std::string mouseMsg2D ("Mouse coordinates in image viewer");
@@ -188,6 +190,10 @@ main (int argc, char** argv)
   boost::signals2::connection image_connection = interface->registerCallback (image_cb);
   unsigned char* rgb_data = 0;
   unsigned rgb_data_size = 0;
+  int img_2d_width = 1000;
+  int img_2d_height = 750;
+  unsigned char* img_2d_rgb = new unsigned char[3 * img_2d_width * img_2d_height];
+
 #endif 
   
   interface->start ();
@@ -199,6 +205,7 @@ main (int argc, char** argv)
     cld->spinOnce ();
 #if !((VTK_MAJOR_VERSION == 5)&&(VTK_MINOR_VERSION <= 4))
     img->spinOnce ();
+    img_2d->spinOnce ();
 #endif
     FPS_CALC ("drawing");
 
@@ -248,20 +255,48 @@ main (int argc, char** argv)
       extract.setNegative (true);
       extract.filter (*p_cloud);
 
-      // Create a set of planar coefficients with X=Y=0,Z=1
+      std::vector<int> indices;
+      pcl::removeNaNFromPointCloud (*p_cloud, *p_cloud, indices);
+
+      // Set coefficients for projection to ground plane
       pcl::ModelCoefficients::Ptr coefficients_2d (new pcl::ModelCoefficients ());
       coefficients_2d->values.resize (4);
-      coefficients_2d->values[0] = 0;
-      coefficients_2d->values[1] = 1.0;
-      coefficients_2d->values[2] = 0;
-      coefficients_2d->values[3] = 0;
+      coefficients_2d->values[0] = a;
+      coefficients_2d->values[1] = b;
+      coefficients_2d->values[2] = c;
+      coefficients_2d->values[3] = d;
 
-      // Create the filtering object
+      // Project to ground plane
       pcl::ProjectInliers<pcl::PointXYZRGBA> proj;
       proj.setModelType (pcl::SACMODEL_PLANE);
       proj.setInputCloud (p_cloud);
       proj.setModelCoefficients (coefficients_2d);
       proj.filter (*p_cloud);
+
+      // Set coefficients and project to y=0 plane
+      coefficients_2d->values[0] = 0;
+      coefficients_2d->values[1] = 1.0;
+      coefficients_2d->values[2] = 0;
+      coefficients_2d->values[3] = 0;
+      proj.filter (*p_cloud);
+
+      // Write obstacle data to an image.
+      memset(img_2d_rgb, 0, 3 * img_2d_width * img_2d_height);
+      pcl::PointCloud<pcl::PointXYZRGBA>::iterator i = p_cloud->begin();
+      for (; i != p_cloud->end(); i++) {
+        float x = i->x;
+        float z = i->z;
+
+        int newX = (int) floor((x + 2.5) * 200 + .5);
+        int newZ = (int) floor(z * 100 + .5);
+
+        if (0 <= newX && newX < img_2d_width && 0 <= newZ && newZ < img_2d_height) {
+          int pos = img_2d_width * 3 * newZ + 3 * newX;
+          img_2d_rgb[pos] = 255;
+          img_2d_rgb[pos + 1] = 255;
+          img_2d_rgb[pos + 2] = 255;
+        }
+      }
 
       pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
       if (!cld->updatePointCloud (p_cloud, handler, "OpenNICloud"))
@@ -289,6 +324,7 @@ main (int argc, char** argv)
         g_image->fillRGB (g_image->getWidth (), g_image->getHeight (), rgb_data);
         img->showRGBImage (rgb_data, g_image->getWidth (), g_image->getHeight ());
       }
+      img_2d->showRGBImage (img_2d_rgb, img_2d_width, img_2d_height);
       img_mutex.unlock ();
     }
 #endif
