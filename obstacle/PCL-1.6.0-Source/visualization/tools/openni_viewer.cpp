@@ -45,7 +45,9 @@
 #include <pcl/console/print.h>
 #include <pcl/console/parse.h>
 #include <pcl/console/time.h>
+
 #include <pcl/filters/extract_indices.h>
+#include <pcl/filters/project_inliers.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
 #define SHOW_FPS 1
@@ -234,6 +236,21 @@ main (int argc, char** argv)
       extract.setIndices (inliers);
       extract.setNegative (true);
       extract.filter (*p_cloud);
+
+      // Create a set of planar coefficients with X=Y=0,Z=1
+      pcl::ModelCoefficients::Ptr coefficients_2d (new pcl::ModelCoefficients ());
+      coefficients_2d->values.resize (4);
+      coefficients_2d->values[0] = 0;
+      coefficients_2d->values[1] = 1.0;
+      coefficients_2d->values[2] = 0;
+      coefficients_2d->values[3] = 0;
+
+      // Create the filtering object
+      pcl::ProjectInliers<pcl::PointXYZRGBA> proj;
+      proj.setModelType (pcl::SACMODEL_PLANE);
+      proj.setInputCloud (p_cloud);
+      proj.setModelCoefficients (coefficients_2d);
+      proj.filter (*p_cloud);
 
       pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
       if (!cld->updatePointCloud (p_cloud, handler, "OpenNICloud"))
