@@ -185,6 +185,26 @@ project_points(pcl::ModelCoefficients::Ptr ground_plane, std::vector<pcl::PointX
   }
 }
 
+void
+write_to_image(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud, unsigned char* img_2d_rgb, int img_2d_width, int img_2d_height) {
+  // Write obstacle data to an image.
+  memset(img_2d_rgb, 0, 3 * img_2d_width * img_2d_height);
+  for (pcl::PointCloud<pcl::PointXYZRGBA>::iterator i = p_cloud->begin(); i != p_cloud->end(); i++) {
+    float x = i->x;
+    float z = i->z;
+
+    int newX = (int) floor((x + 2.5) * 200 + .5);
+    int newZ = (int) floor(z * 100 + .5);
+
+    if (0 <= newX && newX < img_2d_width && 0 <= newZ && newZ < img_2d_height) {
+      int pos = img_2d_width * 3 * newZ + 3 * newX;
+      img_2d_rgb[pos] = 255;
+      img_2d_rgb[pos + 1] = 255;
+      img_2d_rgb[pos + 2] = 255;
+    }
+  }
+}
+
 /* ---[ */
 int
 main (int argc, char** argv)
@@ -295,23 +315,7 @@ main (int argc, char** argv)
 
       project_points(coefficients, p_cloud);
 
-      // Write obstacle data to an image.
-      memset(img_2d_rgb, 0, 3 * img_2d_width * img_2d_height);
-      pcl::PointCloud<pcl::PointXYZRGBA>::iterator i = p_cloud->begin();
-      for (; i != p_cloud->end(); i++) {
-        float x = i->x;
-        float z = i->z;
-
-        int newX = (int) floor((x + 2.5) * 200 + .5);
-        int newZ = (int) floor(z * 100 + .5);
-
-        if (0 <= newX && newX < img_2d_width && 0 <= newZ && newZ < img_2d_height) {
-          int pos = img_2d_width * 3 * newZ + 3 * newX;
-          img_2d_rgb[pos] = 255;
-          img_2d_rgb[pos + 1] = 255;
-          img_2d_rgb[pos + 2] = 255;
-        }
-      }
+      write_to_image(p_cloud, img_2d_rgb, img_2d_width, img_2d_height);
 
       pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
       if (!cld->updatePointCloud (p_cloud, handler, "OpenNICloud"))
