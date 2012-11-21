@@ -121,15 +121,274 @@ struct EventHelper
 #endif  
 };
 
+bool dest_verbose = false;
+SonicDog dog(1);
+pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
+double defR = 192.21;
+double defG = 96.32;
+double defB = 128.36;
+double pinkMag;
+double pinkR;
+double pinkG;
+double pinkB;
 int frameSkipCount = 5;
 int threshold = 210;
 int minCount = 4000;
-
 // Callback sets this to true to indicate that recalibration of
 // the color pink should be performed.
 bool recalibrate = false;
-
 bool shift = false;
+int beacon = -1;
+int frameNum = 0;
+bool cld_init = false;
+int width;
+int height;
+IplImage * iimg;
+IplImage * dst;
+IplImage * sim;
+float * imgData;
+float * dstData;
+unsigned char * simData;
+cv::Ptr<cv::FeatureDetector> blob_detector;
+
+void
+destination_init(pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr g_cloud) {
+  width = g_cloud->width;
+  height = g_cloud->height;
+
+  pinkMag = sqrt(defR*defR+defG*defG+defB*defB);
+
+  pinkR = defR / pinkMag;
+  pinkG = defG / pinkMag;
+  pinkB = defB / pinkMag;
+
+  // set up the parameters (check the defaults in opencv's code in blobdetector.cpp)
+  cv::SimpleBlobDetector::Params params;
+  params.minDistBetweenBlobs = 100.0f;
+  params.filterByInertia = false;
+  params.filterByConvexity = true;
+  params.filterByColor = true;
+  params.filterByCircularity = false;
+  params.filterByArea = true;
+  params.minArea = 800;
+  params.maxArea = 100000;
+  params.minConvexity = 0.3;
+  params.maxConvexity = 1.0;
+  params.minThreshold = 0.9f;
+  params.maxThreshold = 1.0f;
+  params.thresholdStep = 0.1f;
+  params.blobColor = 255;
+  // ... any other params you don't want default value
+
+  blob_detector = new cv::SimpleBlobDetector(params);
+  blob_detector->create("SimpleBlob");
+
+  iimg = cvCreateImage(cvSize(width, height), IPL_DEPTH_32F, 3);
+  dst = cvCreateImage(cvSize(width, height), IPL_DEPTH_32F, 3);
+  sim = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
+  imgData = reinterpret_cast<float *>(iimg->imageData);
+  dstData = reinterpret_cast<float *>(dst->imageData);
+  simData = reinterpret_cast<unsigned char *>(sim->imageData);
+}
+
+bool 
+detectPinkBox(
+  pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr g_cloud, 
+  pcl::PointXYZRGBA &outputPoint, 
+  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud) 
+{
+
+  // load img with the RGB data from the point cloud.
+  for (int x = 0; x < width; x++) {
+    for (int y = 0; y < height; y++) {
+      const pcl::PointXYZRGBA p = g_cloud->at(x,y);
+      imgData[3*(y*width+x)+0] = p.r;
+      imgData[3*(y*width+x)+1] = p.g;
+      imgData[3*(y*width+x)+2] = p.b;
+      dstData[3*(y*width+x)+0] = p.r;
+      dstData[3*(y*width+x)+1] = p.g;
+      dstData[3*(y*width+x)+2] = p.b;
+    }
+  }
+  // convert color space if desired
+  // cvCvtColor(iimg, dst, CV_RGB2HSV);
+  std::vector<cv::KeyPoint> keypoints;
+
+  // load dvalues with simiarities to pink 
+  for (int x = 0; x < width; x++) {
+    for (int y = 0; y < height; y++) {
+      
+      double h = dstData[3*(y*width+x)+0];
+      double s = dstData[3*(y*width+x)+1];
+      double v = dstData[3*(y*width+x)+2];
+      
+      // compute normalized rgb vector:
+      double mag = sqrt(h*h+s*s+v*v);
+      if (mag < 0.0001) mag = 0.0001;
+      
+      h /= mag;
+      s /= mag;
+      v /= mag;
+      
+      // compute cosine similarity with "pink" vector. 
+      //double dotproduct = h*pinkR + s*pinkG + v*pinkB;
+      double dh = fabs(h-pinkR);
+      double ds = fabs(s-pinkG);
+      double dv = fabs(v-pinkB);
+      
+      double dmag = sqrt(dh*dh+ds*ds+dv*dv);
+      double magDiff = fabs(mag - pinkMag);
+      if (magDiff > 192) dmag = 1;
+      
+      int similarity = (1.0 - dmag) * 255;
+      
+      if (similarity < threshold) similarity = 0;
+      else similarity = 255;
+      
+      simData[y*width + x] = similarity;
+    }
+  }
+
+  // detect!      
+  keypoints.clear();
+  blob_detector->detect(sim, keypoints);
+  bool detected = false;
+  cv::KeyPoint bestPoint;
+  bestPoint.size = -1;
+  
+  for(std::vector<cv::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
+    cv::KeyPoint k = *it;
+    if (k.size > bestPoint.size) { 
+      detected = true; bestPoint = k; 
+    }
+  }
+  // copy to a modifiable point-cloud
+  
+  // These values are used to help compute 
+  // an average RGB vector for pixels above threshold to help with recalibration.
+  float sumR = 0;
+  float sumG = 0;
+  float sumB = 0;
+  int numAvgRgb = 0;
+
+  // compute average RGB value at center (for recalibration)
+  // compute world-coordinate X,Y,Z given average in neighborhood around keypoint pixel X,Y coordinates
+  for (int x = 0; x < width; x++) {
+    for (int y = 0; y < height; y++) {  
+
+      const pcl::PointXYZRGBA &p = g_cloud->at(x,y);
+
+      double h = dstData[3*(y*width+x)+0];
+      double s = dstData[3*(y*width+x)+1];
+      double v = dstData[3*(y*width+x)+2];
+
+      // only compute avg HSV vals for pixels near center of frame
+      bool inCenterX = x >= (7*width)/16 && x <= (9*width)/16;
+      bool inCenterY = y >= (7*height)/16 && y <= (9*height)/16;
+      bool inCenter = inCenterX && inCenterY;
+      if (inCenter && p.r == p.r && p.g == p.g && p.b == p.b) {
+	sumR += h;
+	sumG += s;
+	sumB += v;
+	numAvgRgb++;
+      }
+    }
+  }
+
+  float sumX = 0;
+  float sumY = 0;
+  float sumZ = 0;
+  float totalWeight = 0;
+
+  // determine XYZ world coordinates from the keyPoint
+  if (detected) {
+    //const pcl::PointXYZRGBA &kp = g_cloud->at((int)bestPoint.pt.x,(int)bestPoint.pt.y);
+    //bool isNan = !kp.x || kp.x != kp.x || !kp.y || kp.y != kp.y || !kp.z || kp.z != kp.z;	
+    
+    
+    for (int x = 0; x < width; x++) {
+      for (int y = 0; y < height; y++) {
+	const pcl::PointXYZRGBA &p = g_cloud->at(x,y);
+	float dx = bestPoint.pt.x - x;
+	float dy = bestPoint.pt.y - y;
+	float d = sqrt(dx*dx + dy*dy);
+	if (d < bestPoint.size/2 && !(!p.x || p.x != p.x || !p.y || p.y != p.y || !p.z || p.z != p.z)) {
+	    
+	  sumX += p.x;
+	  sumY += p.y;
+	  sumZ += p.z;
+	  totalWeight += 1;
+	}
+      }
+    }
+  }
+
+  if (totalWeight = 0) detected = false;
+
+  float avgX = 0;
+  float avgY = 0;
+  float avgZ = 0;
+
+  if (detected) {
+    avgX = sumX / totalWeight;
+    avgY = sumY / totalWeight;
+    avgZ = sumZ / totalWeight;
+
+    outputPoint.x = avgX;
+    outputPoint.y = avgY;
+    outputPoint.z = avgZ;
+    if (dest_verbose) 
+      printf("dest detected at (%.2f, %.2f, %.2f)\n", avgX, avgY, avgZ);
+  }
+
+  // copy similarity values to the point cloud for display
+  if (p_cloud != NULL) {
+    pcl::copyPointCloud(*g_cloud, *p_cloud);
+    for (int x = 0; x < width; x++) {
+      for (int y = 0; y < height; y++) {
+	int simColor = simData[y*width + x];
+	pcl::PointXYZRGBA &p = p_cloud->at(x,y);
+	bool nearKp = false;
+
+	for(std::vector<cv::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
+	  cv::KeyPoint k = *it;
+	  if (k.pt.x && k.pt.y && k.pt.x == k.pt.x) {
+	    double dx = k.pt.x - x;
+	    double dy = k.pt.y - y;
+	  
+	    if (sqrt(dx*dx + dy*dy) < (k.size / 2)) nearKp = true;
+	  }
+	}
+	if (nearKp) {
+	  p.g = (p.g + 255) / 2;
+	  p.r = p.b = (p.r + p.b) / 4;
+	} else {
+	  p.r = simColor; 
+	  p.g = simColor; 
+	  p.b = simColor; 
+	}
+      }
+    }
+  }
+
+  if (recalibrate) {
+    double avgR = sumR/numAvgRgb;
+    double avgG = sumG/numAvgRgb;
+    double avgB = sumB/numAvgRgb;
+
+    if (dest_verbose) printf("Recalibrating from %d pts to (R,G,B) of (%.2f, %.2f, %.2f)\n", numAvgRgb, avgR, avgG, avgB);
+    recalibrate = false;
+    pinkR = avgR; 
+    pinkG = avgG;
+    pinkB = avgB;
+    pinkMag = sqrt(pinkR*pinkR+pinkG*pinkG+pinkB*pinkB);
+    pinkR /= pinkMag;
+    pinkG /= pinkMag;
+    pinkB /= pinkMag;
+  }
+
+  return detected;
+} // end detectPinkBox
 
 // Simple callbacks.
 void 
@@ -149,11 +408,23 @@ keyboard_callback (const pcl::visualization::KeyboardEvent& event, void* cookie)
   if (event.keyDown() && (event.getKeySym() == "Shift_L" || event.getKeySym() == "Shift_R")) shift = true;   
   if (event.keyUp() && (event.getKeySym() == "Shift_L" || event.getKeySym() == "Shift_R")) shift = false;   
 
-  if (event.keyDown() && event.getKeySym() == "Up") if (shift) threshold += 10; else threshold += 1;
-  else if (event.keyDown() && event.getKeySym() == "Down") if (shift) threshold -= 10; else threshold -= 1;
+  if (event.keyDown() && event.getKeySym() == "Up") {
+    if (shift) threshold += 10; 
+    else threshold += 1;
+  }
+  else if (event.keyDown() && event.getKeySym() == "Down") {
+    if (shift) threshold -= 10; 
+    else threshold -= 1;
+  }
 
-  if (event.keyDown() && event.getKeySym() == "Right") if (shift) minCount += 500; else minCount += 2000;
-  else if (event.keyDown() && event.getKeySym() == "Left") if (shift) minCount -= 500; else minCount -= 2000;
+  if (event.keyDown() && event.getKeySym() == "Right") {
+    if (shift) minCount += 500;
+    else minCount += 2000;
+  }
+  else if (event.keyDown() && event.getKeySym() == "Left") {
+    if (shift) minCount -= 500; 
+    else minCount -= 2000;
+  }
 
   if (event.keyDown() && event.getKeyCode() == 32) {
 
@@ -187,19 +458,6 @@ main (int argc, char** argv)
     }
   }
 
-  SonicDog dog(1);
-
-  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
-  printf("Initializing\n");
-  double pinkR = 192.21;
-  double pinkG = 96.32;
-  double pinkB = 128.36;
-  double pinkMag = sqrt(pinkR*pinkR+pinkG*pinkG+pinkB*pinkB);
-
-  pinkR /= pinkMag;
-  pinkG /= pinkMag;
-  pinkB /= pinkMag;
-
   EventHelper event_helper;
   std::string device_id = "";
   pcl::console::parse_argument (argc, argv, "-dev", device_id);
@@ -229,41 +487,6 @@ main (int argc, char** argv)
 #endif 
   
   interface->start ();
-  int beacon = -1;
-  int frameNum = 0;
-  bool cld_init = false;
-
-  int width;
-  int height;
-
-  IplImage * iimg;
-  IplImage * dst;
-  IplImage * sim;
-  float * imgData;
-  float * dstData;
-  unsigned char * simData;
-
-  // set up the parameters (check the defaults in opencv's code in blobdetector.cpp)
-  cv::SimpleBlobDetector::Params params;
-  params.minDistBetweenBlobs = 100.0f;
-  params.filterByInertia = false;
-  params.filterByConvexity = true;
-  params.filterByColor = true;
-  params.filterByCircularity = false;
-  params.filterByArea = true;
-  params.minArea = 800;
-  params.maxArea = 100000;
-  params.minConvexity = 0.3;
-  params.maxConvexity = 1.0;
-  params.minThreshold = 0.9f;
-  params.maxThreshold = 1.0f;
-  params.thresholdStep = 0.1f;
-  params.blobColor = 255;
-  // ... any other params you don't want default value
-
-  // set up and create the detector using the parameters
-  cv::Ptr<cv::FeatureDetector> blob_detector = new cv::SimpleBlobDetector(params);
-  blob_detector->create("SimpleBlob");
 
   // Loop
   while (!cld->wasStopped ())
@@ -282,196 +505,37 @@ main (int argc, char** argv)
     {
       if (!cld_init)
       {
-	width = g_cloud->width;
-	height = g_cloud->height;
-
-	iimg = cvCreateImage(cvSize(width, height), IPL_DEPTH_32F, 3);
-	dst = cvCreateImage(cvSize(width, height), IPL_DEPTH_32F, 3);
-	sim = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
-	imgData = reinterpret_cast<float *>(iimg->imageData);
-	dstData = reinterpret_cast<float *>(dst->imageData);
-
-	simData = reinterpret_cast<unsigned char *>(sim->imageData);
+	destination_init(g_cloud);
 
         cld->getRenderWindow ()->SetSize (g_cloud->width, g_cloud->height);
         cld->getRenderWindow ()->SetPosition (g_cloud->width, 0);
         cld_init = !cld_init;
       }
-
-      // load img with the RGB data from the point cloud.
-      for (int x = 0; x < width; x++) {
-	for (int y = 0; y < height; y++) {
-	  const pcl::PointXYZRGBA p = g_cloud->at(x,y);
-	  imgData[3*(y*width+x)+0] = p.r;
-	  imgData[3*(y*width+x)+1] = p.g;
-	  imgData[3*(y*width+x)+2] = p.b;
-	  dstData[3*(y*width+x)+0] = p.r;
-	  dstData[3*(y*width+x)+1] = p.g;
-	  dstData[3*(y*width+x)+2] = p.b;
-	}
-      }
-
-      // convert to HSV color space
-      // cvCvtColor(iimg, dst, CV_RGB2HSV);
-
-      std::vector<cv::KeyPoint> keypoints;
-
-      // load dvalues with simiarities to pink 
-      for (int x = 0; x < width; x++) {
-	for (int y = 0; y < height; y++) {
-	  
-	  double h = dstData[3*(y*width+x)+0];
-	  double s = dstData[3*(y*width+x)+1];
-	  double v = dstData[3*(y*width+x)+2];
-
-	  // compute normalized rgb vector:
-	  double mag = sqrt(h*h+s*s+v*v);
-	  if (mag < 0.0001) mag = 0.0001;
-
-	  h /= mag;
-	  s /= mag;
-	  v /= mag;
-
-	  // compute cosine similarity with "pink" vector. 
-	  double dotproduct = h*pinkR + s*pinkG + v*pinkB;
-	  double dh = fabs(h-pinkR);
-	  double ds = fabs(s-pinkG);
-	  double dv = fabs(v-pinkB);
-	  
-	  double dmag = sqrt(dh*dh+ds*ds+dv*dv);
-	  double magDiff = fabs(mag - pinkMag);
-	  if (magDiff > 192) dmag = 1;
-	  
-	  unsigned similarity = (1.0 - dmag) * 255;
-
-	  if (similarity < threshold) similarity = 0;
-	  else similarity = 255;
-
-	  simData[y*width + x] = similarity;
-	}
-      }
-
-      // detect!      
-      blob_detector->detect(sim, keypoints);
-
-      printf("keypoints size: %d\n", keypoints.size());
-
-      for(std::vector<cv::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
-	cv::KeyPoint k = *it;
-	
-	if (k.pt.x && k.pt.y && k.pt.x == k.pt.x) printf("KeyPoint (%.2f, %.2f) %.2f\n", k.pt.x, k.pt.y, k.size);
-      }
-
-      // copy to a modifiable point-cloud
-      pcl::copyPointCloud(*g_cloud, *p_cloud);
-
-      // These values are used to help compute 
-      // an average RGB vector for pixels above threshold to help with recalibration.
-      float sumR = 0;
-      float sumG = 0;
-      float sumB = 0;
-      int numAvgRgb = 0;
-      float sumX = 0;
-      float sumY = 0;
-      float sumZ = 0;
-      int numAvg = 0;
-
-      // compute XYZ centroid and average HSV value at center (for recalibration)
-      for (int x = 0; x < g_cloud->width; x++) {
-        for (int y = 0; y < g_cloud->height; y++) {
-	  
-	  unsigned char similarity = simData[y*width+x];
-
-	  pcl::PointXYZRGBA &p = p_cloud->at(x,y);
-
-	  double h = dstData[3*(y*width+x)+0];
-	  double s = dstData[3*(y*width+x)+1];
-	  double v = dstData[3*(y*width+x)+2];
-
-	  if (similarity >= threshold && p.x == p.x && p.y == p.y && p.z == p.z) {
-	      sumX += p.x;
-	      sumY += p.y;
-	      sumZ += p.z;
-	      numAvg++;
-	  }
-	  // only compute avg HSV vals for pixels near center of frame
-	  bool inCenterX = x >= (7*width)/16 && x <= (9*width)/16;
-	  bool inCenterY = y >= (7*height)/16 && y <= (9*height)/16;
-	  bool inCenter = inCenterX && inCenterY;
-	  if (inCenter && p.r == p.r && p.g == p.g && p.b == p.b) {
-	    sumR += h;
-	    sumG += s;
-	    sumB += v;
-	    numAvgRgb++;
-	  }
-	 }
-      }
-
-      // copy similarity values to the point cloud for display
-      for (int x = 0; x < width; x++) {
-	for (int y = 0; y < height; y++) {
-          int simColor = simData[y*width + x];
-	  pcl::PointXYZRGBA &p = p_cloud->at(x,y);
-	  bool nearKp = false;
-
-	  for(std::vector<cv::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
-	    cv::KeyPoint k = *it;
-	    if (k.pt.x && k.pt.y && k.pt.x == k.pt.x) {
-	      double dx = k.pt.x - x;
-	      double dy = k.pt.y - y;
-	      
-	      if (sqrt(dx*dx + dy*dy) < (k.size / 2)) nearKp = true;
-	    }
-	  }
-	  if (nearKp) {
-	    p.r = (p.r + 255) / 2;
-	    p.g = p.b = (p.g + p.b) / 4;
-	  } else {
-	    p.r = simColor; 
-	    p.g = simColor; 
-	    p.b = simColor; 
-	  }
-	}
-      }
-
-      double avgX = sumX/numAvg;
-      double avgY = sumY/numAvg;
-      double avgZ = sumZ/numAvg;
-      double avgR = sumR/numAvgRgb;
-      double avgG = sumG/numAvgRgb;
-      double avgB = sumB/numAvgRgb;
       
-      bool frameSkip = frameNum % frameSkipCount != 0;
-      bool haveBeacon = numAvg >= minCount;
+      pcl::PointXYZRGBA p;
 
-      if (!frameSkip) printf("Count: %d, Min Count: %d, Min similarity: %d, Beacon ID: %d\n", numAvg, minCount, threshold, beacon);
-      
-      if (beacon == -1 && haveBeacon) {
-	beacon = dog.addBeacon(12*avgX, 3*avgZ);
-	dog.start();
-      } 
-      else if (beacon != -1 && !haveBeacon) {
-        dog.removeObject(beacon);
-	beacon = -1;
-      } 
-      else if (!frameSkip == 0 && haveBeacon && beacon != -1) {
-        dog.changeObjectLoc(beacon,12*avgX, 3*avgZ);
+      bool detected = detectPinkBox(g_cloud, p, p_cloud); 
+
+      if (detected) {
+	printf("Dest detected at (%.2f, %.2f, %.2f)\n", p.x, p.y, p.z);
+	cout.flush();
       }
 
-// if enough points, etc      
+      /*  
+	  if (beacon == -1 && haveBeacon) {
+	  beacon = dog.addBeacon(12*avgX, 3*avgZ);
+	  dog.start();
+	  } 
+	  else if (beacon != -1 && !haveBeacon) {
+	  dog.removeObject(beacon);
+	  beacon = -1;
+	  } 
+	  else if (!frameSkip == 0 && haveBeacon && beacon != -1) {
+	  dog.changeObjectLoc(beacon,12*avgX, 3*avgZ);
+	  }
+      */
 
-      if (recalibrate) {
-	printf("Recalibrating from %d pts to (R,G,B) of (%.2f, %.2f, %.2f)\n", numAvgRgb, avgR, avgG, avgB);
-	recalibrate = false;
-	pinkR = avgR; 
-        pinkG = avgG;
-	pinkB = avgB;
-	pinkMag = sqrt(pinkR*pinkR+pinkG*pinkG+pinkB*pinkB);
-	pinkR /= pinkMag;
-	pinkG /= pinkMag;
-	pinkB /= pinkMag;
-      }
-
+      // draw p_cloud instead of g_cloud 
       pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
       if (!cld->updatePointCloud (p_cloud, handler, "OpenNICloud"))
       {
