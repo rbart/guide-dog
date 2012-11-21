@@ -523,7 +523,7 @@ main (int argc, char** argv)
       pcl::PointXYZRGBA boxPoint;
       bool boxFound = detectPinkBox(g_cloud, boxPoint, NULL);
       std::vector<pcl::PointXYZRGBA> points;
-      points.insert(boxPoint);
+      points.push_back(boxPoint);
 
       std::vector<pcl::PointXYZRGBA> results;
 
