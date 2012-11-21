@@ -169,6 +169,22 @@ project_points(pcl::ModelCoefficients::Ptr ground_plane, pcl::PointCloud<pcl::Po
   proj.filter (*p_cloud);
 }
 
+void
+project_points(pcl::ModelCoefficients::Ptr ground_plane, std::vector<pcl::PointXYZRGBA> &points, std::vector<pcl::PointXYZRGBA> &result) {
+  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
+  for (size_t i = 0; i < points.size(); i++) {
+    cloud->push_back(points[i]);
+  }
+  cloud->width = points.size();
+  cloud->height = 1;
+
+  project_points(ground_plane, cloud);
+
+  for (pcl::PointCloud<pcl::PointXYZRGBA>::iterator i = cloud->begin(); i != cloud->end(); i++) {
+    result.push_back(*i);
+  }
+}
+
 /* ---[ */
 int
 main (int argc, char** argv)
