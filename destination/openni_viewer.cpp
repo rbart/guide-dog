@@ -121,6 +121,7 @@ struct EventHelper
 #endif  
 };
 
+// Destination detection variables
 bool dest_verbose = false;
 SonicDog dog(1);
 pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
@@ -134,8 +135,6 @@ double pinkB;
 int frameSkipCount = 5;
 int threshold = 210;
 int minCount = 4000;
-// Callback sets this to true to indicate that recalibration of
-// the color pink should be performed.
 bool recalibrate = false;
 bool shift = false;
 int beacon = -1;
@@ -150,7 +149,9 @@ float * imgData;
 float * dstData;
 unsigned char * simData;
 cv::Ptr<cv::FeatureDetector> blob_detector;
+// end Destination detection variables
 
+// Initialization routine for destination variables
 void
 destination_init(pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr g_cloud) {
   width = g_cloud->width;
@@ -191,6 +192,7 @@ destination_init(pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr g_cloud) {
   simData = reinterpret_cast<unsigned char *>(sim->imageData);
 }
 
+// Main destination object detection routine
 bool 
 detectPinkBox(
   pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr g_cloud, 
