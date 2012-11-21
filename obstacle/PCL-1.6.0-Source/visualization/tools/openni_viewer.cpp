@@ -258,22 +258,16 @@ main (int argc, char** argv)
       std::vector<int> indices;
       pcl::removeNaNFromPointCloud (*p_cloud, *p_cloud, indices);
 
-      // Set coefficients for projection to ground plane
-      pcl::ModelCoefficients::Ptr coefficients_2d (new pcl::ModelCoefficients ());
-      coefficients_2d->values.resize (4);
-      coefficients_2d->values[0] = a;
-      coefficients_2d->values[1] = b;
-      coefficients_2d->values[2] = c;
-      coefficients_2d->values[3] = d;
-
       // Project to ground plane
       pcl::ProjectInliers<pcl::PointXYZRGBA> proj;
       proj.setModelType (pcl::SACMODEL_PLANE);
       proj.setInputCloud (p_cloud);
-      proj.setModelCoefficients (coefficients_2d);
+      proj.setModelCoefficients (coefficients);
       proj.filter (*p_cloud);
 
       // Set coefficients and project to y=0 plane
+      pcl::ModelCoefficients::Ptr coefficients_2d (new pcl::ModelCoefficients ());
+      coefficients_2d->values.resize (4);
       coefficients_2d->values[0] = 0;
       coefficients_2d->values[1] = 1.0;
       coefficients_2d->values[2] = 0;
