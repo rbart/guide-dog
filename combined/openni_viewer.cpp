@@ -81,7 +81,7 @@ pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr g_cloud;
 boost::shared_ptr<openni_wrapper::Image> g_image;
 
 // Destination detection variables
-bool dest_verbose = false;
+bool dest_verbose = true;
 SonicDog dog(1);
 pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
 double defR = 192.21;
@@ -303,7 +303,7 @@ detectPinkBox(
   }
 
   // copy similarity values to the point cloud for display
-  if (p_cloud != NULL) {
+  if (p_cloud) {
     pcl::copyPointCloud(*g_cloud, *p_cloud);
     for (int x = 0; x < width; x++) {
       for (int y = 0; y < height; y++) {
@@ -521,7 +521,7 @@ main (int argc, char** argv)
       }
 
       pcl::PointXYZRGBA boxPoint;
-      bool boxFound = detectPinkBox(g_cloud, boxPoint, NULL);
+      bool boxFound = detectPinkBox(g_cloud, boxPoint, p_cloud);//pcl::PointCloud<pcl::PointXYZRGBA>::Ptr());
       std::vector<pcl::PointXYZRGBA> points;
       points.push_back(boxPoint);
 
