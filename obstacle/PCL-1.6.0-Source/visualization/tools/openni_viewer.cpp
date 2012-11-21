@@ -229,6 +229,11 @@ add_mark_to_image(pcl::PointXYZRGBA &point, char r, char g, char b, unsigned cha
   }
 }
 
+float
+vector_length(pcl::PointXYZRGBA &point) {
+  return sqrt(pow(point.x, 2) + pow(point.z, 2));
+}
+
 /* ---[ */
 int
 main (int argc, char** argv)
@@ -340,6 +345,35 @@ main (int argc, char** argv)
       project_points(coefficients, p_cloud);
 
       write_to_image(p_cloud, img_2d_rgb, img_2d_width, img_2d_height);
+
+      pcl::PointXYZRGBA closestLeft;
+      float closestLeftDistance = -1;
+      pcl::PointXYZRGBA closestRight;
+      float closestRightDistance = -1;
+
+      for (pcl::PointCloud<pcl::PointXYZRGBA>::iterator i = p_cloud->begin(); i != p_cloud->end(); i++) {
+        float distance = vector_length(*i);
+        if (i->x < 0) {
+          if (closestLeftDistance == -1 || distance < closestLeftDistance) {
+            closestLeft = *i;
+            closestLeftDistance = distance;
+          }
+        } else {
+          if (closestRightDistance == -1 || distance < closestRightDistance) {
+            closestRight = *i;
+            closestRightDistance = distance;
+          }
+        }
+      }
+
+      if (closestLeftDistance != -1) {
+        cout << "closestLeft: " << closestLeft.x << ", " << closestLeft.z << endl;
+        add_mark_to_image(closestLeft, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
+      }
+      if (closestRightDistance != -1) {
+        cout << "closestRight: " << closestRight.x << ", " << closestRight.z << endl;
+        add_mark_to_image(closestRight, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
+      }
 
       pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
       if (!cld->updatePointCloud (p_cloud, handler, "OpenNICloud"))
