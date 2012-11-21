@@ -185,6 +185,16 @@ project_points(pcl::ModelCoefficients::Ptr ground_plane, std::vector<pcl::PointX
   }
 }
 
+int
+transform_x_coord(float x) {
+  return (int) floor((x + 2.5) * 200 + .5);
+}
+
+int
+transform_z_coord(float z) {
+  return (int) floor(z * 100 + .5);
+}
+
 void
 write_point_to_image(int x, int z, char r, char g, char b, unsigned char* img_2d_rgb, int img_2d_width, int img_2d_height) {
   if (0 <= x && x < img_2d_width && 0 <= z && z < img_2d_height) {
@@ -200,11 +210,8 @@ write_to_image(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud, unsigned char* i
   // Write obstacle data to an image.
   memset(img_2d_rgb, 0, 3 * img_2d_width * img_2d_height);
   for (pcl::PointCloud<pcl::PointXYZRGBA>::iterator i = p_cloud->begin(); i != p_cloud->end(); i++) {
-    float x = i->x;
-    float z = i->z;
-
-    int newX = (int) floor((x + 2.5) * 200 + .5);
-    int newZ = (int) floor(z * 100 + .5);
+    int newX = transform_x_coord(i->x);
+    int newZ = transform_z_coord(i->z);
 
     write_point_to_image(newX, newZ, 255, 255, 255, img_2d_rgb, img_2d_width, img_2d_height);
     }
