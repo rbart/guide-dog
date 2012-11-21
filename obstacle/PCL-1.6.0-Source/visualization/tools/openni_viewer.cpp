@@ -147,6 +147,28 @@ mouse_callback (const pcl::visualization::MouseEvent& mouse_event, void* cookie)
   }
 }
 
+void
+project_points(pcl::ModelCoefficients::Ptr ground_plane, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud) {
+  std::vector<int> indices;
+  pcl::removeNaNFromPointCloud (*p_cloud, *p_cloud, indices);
+
+  // Project to ground plane
+  pcl::ProjectInliers<pcl::PointXYZRGBA> proj;
+  proj.setModelType (pcl::SACMODEL_PLANE);
+  proj.setInputCloud (p_cloud);
+  proj.setModelCoefficients (ground_plane);
+  proj.filter (*p_cloud);
+
+  // Set coefficients and project to y=0 plane
+  pcl::ModelCoefficients::Ptr coefficients_2d (new pcl::ModelCoefficients ());
+  coefficients_2d->values.resize (4);
+  coefficients_2d->values[0] = 0;
+  coefficients_2d->values[1] = 1.0;
+  coefficients_2d->values[2] = 0;
+  coefficients_2d->values[3] = 0;
+  proj.filter (*p_cloud);
+}
+
 /* ---[ */
 int
 main (int argc, char** argv)
@@ -255,24 +277,7 @@ main (int argc, char** argv)
       extract.setNegative (true);
       extract.filter (*p_cloud);
 
-      std::vector<int> indices;
-      pcl::removeNaNFromPointCloud (*p_cloud, *p_cloud, indices);
-
-      // Project to ground plane
-      pcl::ProjectInliers<pcl::PointXYZRGBA> proj;
-      proj.setModelType (pcl::SACMODEL_PLANE);
-      proj.setInputCloud (p_cloud);
-      proj.setModelCoefficients (coefficients);
-      proj.filter (*p_cloud);
-
-      // Set coefficients and project to y=0 plane
-      pcl::ModelCoefficients::Ptr coefficients_2d (new pcl::ModelCoefficients ());
-      coefficients_2d->values.resize (4);
-      coefficients_2d->values[0] = 0;
-      coefficients_2d->values[1] = 1.0;
-      coefficients_2d->values[2] = 0;
-      coefficients_2d->values[3] = 0;
-      proj.filter (*p_cloud);
+      project_points(coefficients, p_cloud);
 
       // Write obstacle data to an image.
       memset(img_2d_rgb, 0, 3 * img_2d_width * img_2d_height);
