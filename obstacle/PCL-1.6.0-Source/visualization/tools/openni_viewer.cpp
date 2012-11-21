@@ -214,6 +214,17 @@ write_to_image(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud, unsigned char* i
     int newZ = transform_z_coord(i->z);
 
     write_point_to_image(newX, newZ, 255, 255, 255, img_2d_rgb, img_2d_width, img_2d_height);
+  }
+}
+
+void
+add_mark_to_image(pcl::PointXYZRGBA &point, char r, char g, char b, unsigned char* img_2d_rgb, int img_2d_width, int img_2d_height) {
+  int pointSize = 5;
+  int newX = transform_x_coord(point.x);
+  int newZ = transform_z_coord(point.z);
+  for (int x = newX - pointSize; x <= newX + pointSize; x++) {
+    for (int z = newZ - pointSize; z <= newZ + pointSize; z++) {
+      write_point_to_image(x, z, r, g, b, img_2d_rgb, img_2d_width, img_2d_height);
     }
   }
 }
