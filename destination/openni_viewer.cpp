@@ -149,8 +149,8 @@ keyboard_callback (const pcl::visualization::KeyboardEvent& event, void* cookie)
   if (event.keyDown() && (event.getKeySym() == "Shift_L" || event.getKeySym() == "Shift_R")) shift = true;   
   if (event.keyUp() && (event.getKeySym() == "Shift_L" || event.getKeySym() == "Shift_R")) shift = false;   
 
-  if (event.keyDown() && event.getKeySym() == "Up") if (shift) threshold += 1; else threshold += 10;
-  else if (event.keyDown() && event.getKeySym() == "Down") if (shift) threshold -= 1; else threshold -= 10;
+  if (event.keyDown() && event.getKeySym() == "Up") if (shift) threshold += 10; else threshold += 1;
+  else if (event.keyDown() && event.getKeySym() == "Down") if (shift) threshold -= 10; else threshold -= 1;
 
   if (event.keyDown() && event.getKeySym() == "Right") if (shift) minCount += 500; else minCount += 2000;
   else if (event.keyDown() && event.getKeySym() == "Left") if (shift) minCount -= 500; else minCount -= 2000;
@@ -196,8 +196,6 @@ main (int argc, char** argv)
   double pinkB = 128.36;
   double pinkMag = sqrt(pinkR*pinkR+pinkG*pinkG+pinkB*pinkB);
 
-  double * dvalues;
-
   pinkR /= pinkMag;
   pinkG /= pinkMag;
   pinkB /= pinkMag;
@@ -235,14 +233,37 @@ main (int argc, char** argv)
   int frameNum = 0;
   bool cld_init = false;
 
-  int width = g_cloud->width;
-  int height = g_cloud->height;
+  int width;
+  int height;
 
+  IplImage * iimg;
+  IplImage * dst;
+  IplImage * sim;
+  float * imgData;
+  float * dstData;
+  unsigned char * simData;
 
-  IplImage * iimg = cvCreateImage(cvSize(width, height), IPL_DEPTH_32F, 3);
-  IplImage * dst = cvCreateImage(cvSize(width, height), IPL_DEPTH_32F, 3);
-  float * imgData = reinterpret_cast<float *>(iimg->imageData);
-  float * dstData = reinterpret_cast<float *>(dst->imageData);
+  // set up the parameters (check the defaults in opencv's code in blobdetector.cpp)
+  cv::SimpleBlobDetector::Params params;
+  params.minDistBetweenBlobs = 100.0f;
+  params.filterByInertia = false;
+  params.filterByConvexity = true;
+  params.filterByColor = true;
+  params.filterByCircularity = false;
+  params.filterByArea = true;
+  params.minArea = 800;
+  params.maxArea = 100000;
+  params.minConvexity = 0.3;
+  params.maxConvexity = 1.0;
+  params.minThreshold = 0.9f;
+  params.maxThreshold = 1.0f;
+  params.thresholdStep = 0.1f;
+  params.blobColor = 255;
+  // ... any other params you don't want default value
+
+  // set up and create the detector using the parameters
+  cv::Ptr<cv::FeatureDetector> blob_detector = new cv::SimpleBlobDetector(params);
+  blob_detector->create("SimpleBlob");
 
   // Loop
   while (!cld->wasStopped ())
@@ -261,28 +282,41 @@ main (int argc, char** argv)
     {
       if (!cld_init)
       {
+	width = g_cloud->width;
+	height = g_cloud->height;
+
+	iimg = cvCreateImage(cvSize(width, height), IPL_DEPTH_32F, 3);
+	dst = cvCreateImage(cvSize(width, height), IPL_DEPTH_32F, 3);
+	sim = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
+	imgData = reinterpret_cast<float *>(iimg->imageData);
+	dstData = reinterpret_cast<float *>(dst->imageData);
+
+	simData = reinterpret_cast<unsigned char *>(sim->imageData);
+
         cld->getRenderWindow ()->SetSize (g_cloud->width, g_cloud->height);
         cld->getRenderWindow ()->SetPosition (g_cloud->width, 0);
-	dvalues = new double[g_cloud->width * g_cloud->height];
         cld_init = !cld_init;
       }
 
-
-      // check out OpenCV blob detection
-
-            // load img with the RGB data from the point cloud.
+      // load img with the RGB data from the point cloud.
       for (int x = 0; x < width; x++) {
 	for (int y = 0; y < height; y++) {
 	  const pcl::PointXYZRGBA p = g_cloud->at(x,y);
 	  imgData[3*(y*width+x)+0] = p.r;
 	  imgData[3*(y*width+x)+1] = p.g;
 	  imgData[3*(y*width+x)+2] = p.b;
+	  dstData[3*(y*width+x)+0] = p.r;
+	  dstData[3*(y*width+x)+1] = p.g;
+	  dstData[3*(y*width+x)+2] = p.b;
 	}
       }
 
-      cvCvtColor(iimg, dst, CV_RGB2HSV);
+      // convert to HSV color space
+      // cvCvtColor(iimg, dst, CV_RGB2HSV);
 
-      // compute similarity to "pink" in HSV
+      std::vector<cv::KeyPoint> keypoints;
+
+      // load dvalues with simiarities to pink 
       for (int x = 0; x < width; x++) {
 	for (int y = 0; y < height; y++) {
 	  
@@ -307,11 +341,28 @@ main (int argc, char** argv)
 	  double dmag = sqrt(dh*dh+ds*ds+dv*dv);
 	  double magDiff = fabs(mag - pinkMag);
 	  if (magDiff > 192) dmag = 1;
-	  	
-	  dvalues[y*g_cloud->width + x] = dmag;
+	  
+	  unsigned similarity = (1.0 - dmag) * 255;
+
+	  if (similarity < threshold) similarity = 0;
+	  else similarity = 255;
+
+	  simData[y*width + x] = similarity;
 	}
       }
-      
+
+      // detect!      
+      blob_detector->detect(sim, keypoints);
+
+      printf("keypoints size: %d\n", keypoints.size());
+
+      for(std::vector<cv::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
+	cv::KeyPoint k = *it;
+	
+	if (k.pt.x && k.pt.y && k.pt.x == k.pt.x) printf("KeyPoint (%.2f, %.2f) %.2f\n", k.pt.x, k.pt.y, k.size);
+      }
+
+      // copy to a modifiable point-cloud
       pcl::copyPointCloud(*g_cloud, *p_cloud);
 
       // These values are used to help compute 
@@ -320,52 +371,67 @@ main (int argc, char** argv)
       float sumG = 0;
       float sumB = 0;
       int numAvgRgb = 0;
-      // These values are used to help compute
-      // the centroid for pixels above threshold
       float sumX = 0;
       float sumY = 0;
       float sumZ = 0;
-
       int numAvg = 0;
-      
-      // try building this into an OpenCV Mat object.
-      // then you can try running blob detection on it. 
-      // once that is done, you could move color values
-      // back into the cloud for display. 
-      // also try looking into the visualization library for ways
-      // of showing the cloud.
 
+      // compute XYZ centroid and average HSV value at center (for recalibration)
       for (int x = 0; x < g_cloud->width; x++) {
         for (int y = 0; y < g_cloud->height; y++) {
-	  double testColor = (1.0-dvalues[y*g_cloud->width + x]) * 255;
+	  
+	  unsigned char similarity = simData[y*width+x];
 
-	  const pcl::PointXYZRGBA &g = g_cloud->at(x,y);	  
 	  pcl::PointXYZRGBA &p = p_cloud->at(x,y);
 
-	  if (testColor <= threshold) testColor = 0.0;
-	  else {
-	    if (p.x == p.x && p.y == p.y && p.z == p.z) {
+	  double h = dstData[3*(y*width+x)+0];
+	  double s = dstData[3*(y*width+x)+1];
+	  double v = dstData[3*(y*width+x)+2];
+
+	  if (similarity >= threshold && p.x == p.x && p.y == p.y && p.z == p.z) {
 	      sumX += p.x;
 	      sumY += p.y;
 	      sumZ += p.z;
 	      numAvg++;
-	    }
 	  }
-	  // only compute avg RGB vals for pixels near center of frame
+	  // only compute avg HSV vals for pixels near center of frame
 	  bool inCenterX = x >= (7*width)/16 && x <= (9*width)/16;
 	  bool inCenterY = y >= (7*height)/16 && y <= (9*height)/16;
 	  bool inCenter = inCenterX && inCenterY;
 	  if (inCenter && p.r == p.r && p.g == p.g && p.b == p.b) {
-	    sumR += p.r;
-	    sumG += p.g;
-	    sumB += p.b;
+	    sumR += h;
+	    sumG += s;
+	    sumB += v;
 	    numAvgRgb++;
 	  }
-	  testColor = 0.5;
-	  p.r = testColor;
-	  p.g = testColor;
-	  p.b = testColor;
 	 }
+      }
+
+      // copy similarity values to the point cloud for display
+      for (int x = 0; x < width; x++) {
+	for (int y = 0; y < height; y++) {
+          int simColor = simData[y*width + x];
+	  pcl::PointXYZRGBA &p = p_cloud->at(x,y);
+	  bool nearKp = false;
+
+	  for(std::vector<cv::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
+	    cv::KeyPoint k = *it;
+	    if (k.pt.x && k.pt.y && k.pt.x == k.pt.x) {
+	      double dx = k.pt.x - x;
+	      double dy = k.pt.y - y;
+	      
+	      if (sqrt(dx*dx + dy*dy) < (k.size / 2)) nearKp = true;
+	    }
+	  }
+	  if (nearKp) {
+	    p.r = (p.r + 255) / 2;
+	    p.g = p.b = (p.g + p.b) / 4;
+	  } else {
+	    p.r = simColor; 
+	    p.g = simColor; 
+	    p.b = simColor; 
+	  }
+	}
       }
 
       double avgX = sumX/numAvg;
@@ -374,8 +440,6 @@ main (int argc, char** argv)
       double avgR = sumR/numAvgRgb;
       double avgG = sumG/numAvgRgb;
       double avgB = sumB/numAvgRgb;
-
-      //      printf("Avg (%d) = (%.2f, %.2f, %.2f)\n", numAvg, avgX, avgY, avgZ);
       
       bool frameSkip = frameNum % frameSkipCount != 0;
       bool haveBeacon = numAvg >= minCount;
@@ -394,8 +458,7 @@ main (int argc, char** argv)
         dog.changeObjectLoc(beacon,12*avgX, 3*avgZ);
       }
 
-// if enough points, etc
-      
+// if enough points, etc      
 
       if (recalibrate) {
 	printf("Recalibrating from %d pts to (R,G,B) of (%.2f, %.2f, %.2f)\n", numAvgRgb, avgR, avgG, avgB);
