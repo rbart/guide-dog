@@ -53,6 +53,11 @@
 #include <cassert>
 #include "../../sonic-dog/sonic_dog.h"
 
+#include <boost/math/special_functions/fpclassify.hpp>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/project_inliers.h>
+#include <pcl/segmentation/sac_segmentation.h>
+
 #define SHOW_FPS 1
 #if SHOW_FPS
 #define FPS_CALC(_WHAT_) \
@@ -371,6 +376,7 @@ printHelp (int argc, char **argv)
 boost::shared_ptr<pcl::visualization::PCLVisualizer> cld;
 #if !((VTK_MAJOR_VERSION == 5)&&(VTK_MINOR_VERSION <= 4))
 boost::shared_ptr<pcl::visualization::ImageViewer> img;
+boost::shared_ptr<pcl::visualization::ImageViewer> img_2d;
 #endif
 
 struct EventHelper
@@ -449,6 +455,93 @@ mouse_callback (const pcl::visualization::MouseEvent& mouse_event, void* cookie)
   }
 }
 
+void
+project_points(pcl::ModelCoefficients::Ptr ground_plane, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud) {
+  std::vector<int> indices;
+  pcl::removeNaNFromPointCloud (*p_cloud, *p_cloud, indices);
+
+  // Project to ground plane
+  pcl::ProjectInliers<pcl::PointXYZRGBA> proj;
+  proj.setModelType (pcl::SACMODEL_PLANE);
+  proj.setInputCloud (p_cloud);
+  proj.setModelCoefficients (ground_plane);
+  proj.filter (*p_cloud);
+
+  // Set coefficients and project to y=0 plane
+  pcl::ModelCoefficients::Ptr coefficients_2d (new pcl::ModelCoefficients ());
+  coefficients_2d->values.resize (4);
+  coefficients_2d->values[0] = 0;
+  coefficients_2d->values[1] = 1.0;
+  coefficients_2d->values[2] = 0;
+  coefficients_2d->values[3] = 0;
+  proj.filter (*p_cloud);
+}
+
+void
+project_points(pcl::ModelCoefficients::Ptr ground_plane, std::vector<pcl::PointXYZRGBA> &points, std::vector<pcl::PointXYZRGBA> &result) {
+  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
+  for (size_t i = 0; i < points.size(); i++) {
+    cloud->push_back(points[i]);
+  }
+  cloud->width = points.size();
+  cloud->height = 1;
+
+  project_points(ground_plane, cloud);
+
+  for (pcl::PointCloud<pcl::PointXYZRGBA>::iterator i = cloud->begin(); i != cloud->end(); i++) {
+    result.push_back(*i);
+  }
+}
+
+int
+transform_x_coord(float x) {
+  return (int) floor((x + 2.5) * 200 + .5);
+}
+
+int
+transform_z_coord(float z) {
+  return (int) floor(z * 100 + .5);
+}
+
+void
+write_point_to_image(int x, int z, char r, char g, char b, unsigned char* img_2d_rgb, int img_2d_width, int img_2d_height) {
+  if (0 <= x && x < img_2d_width && 0 <= z && z < img_2d_height) {
+    int pos = img_2d_width * 3 * z + 3 * x;
+    img_2d_rgb[pos] = r;
+    img_2d_rgb[pos + 1] = g;
+    img_2d_rgb[pos + 2] = b;
+  }
+}
+
+void
+write_to_image(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud, unsigned char* img_2d_rgb, int img_2d_width, int img_2d_height) {
+  // Write obstacle data to an image.
+  memset(img_2d_rgb, 0, 3 * img_2d_width * img_2d_height);
+  for (pcl::PointCloud<pcl::PointXYZRGBA>::iterator i = p_cloud->begin(); i != p_cloud->end(); i++) {
+    int newX = transform_x_coord(i->x);
+    int newZ = transform_z_coord(i->z);
+
+    write_point_to_image(newX, newZ, 255, 255, 255, img_2d_rgb, img_2d_width, img_2d_height);
+  }
+}
+
+void
+add_mark_to_image(pcl::PointXYZRGBA &point, char r, char g, char b, unsigned char* img_2d_rgb, int img_2d_width, int img_2d_height) {
+  int pointSize = 5;
+  int newX = transform_x_coord(point.x);
+  int newZ = transform_z_coord(point.z);
+  for (int x = newX - pointSize; x <= newX + pointSize; x++) {
+    for (int z = newZ - pointSize; z <= newZ + pointSize; z++) {
+      write_point_to_image(x, z, r, g, b, img_2d_rgb, img_2d_width, img_2d_height);
+    }
+  }
+}
+
+float
+vector_length(pcl::PointXYZRGBA &point) {
+  return sqrt(pow(point.x, 2) + pow(point.z, 2));
+}
+
 /* ---[ */
 int
 main (int argc, char** argv)
@@ -482,6 +575,7 @@ main (int argc, char** argv)
 
 #if !((VTK_MAJOR_VERSION == 5)&&(VTK_MINOR_VERSION <= 4))
   img.reset (new pcl::visualization::ImageViewer ("OpenNI Viewer"));
+  img_2d.reset (new pcl::visualization::ImageViewer ("OpenNI Viewer - 2D"));
   // Register callbacks
   std::string keyMsg2D ("Key event for image viewer");
   std::string mouseMsg2D ("Mouse coordinates in image viewer");
@@ -491,6 +585,10 @@ main (int argc, char** argv)
   boost::signals2::connection image_connection = interface->registerCallback (image_cb);
   unsigned char* rgb_data = 0;
   unsigned rgb_data_size = 0;
+  int img_2d_width = 1000;
+  int img_2d_height = 750;
+  unsigned char* img_2d_rgb = new unsigned char[3 * img_2d_width * img_2d_height];
+
 #endif 
   
   interface->start ();
@@ -502,6 +600,7 @@ main (int argc, char** argv)
     cld->spinOnce ();
 #if !((VTK_MAJOR_VERSION == 5)&&(VTK_MINOR_VERSION <= 4))
     img->spinOnce ();
+    img_2d->spinOnce ();
 #endif
     FPS_CALC ("drawing");
 
@@ -535,6 +634,75 @@ main (int argc, char** argv)
       // replace with calls to sonic dog
       if (boxFound) printf("Destination detected at (%.2f, %.2f, %.2f)\n", boxPoint.x, boxPoint.y, boxPoint.z);
 
+      pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+      pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+      // Create the segmentation object
+      pcl::SACSegmentation<pcl::PointXYZRGBA> seg;
+      seg.setOptimizeCoefficients (true);
+      seg.setModelType (pcl::SACMODEL_PLANE);
+      seg.setMethodType (pcl::SAC_RANSAC);
+      seg.setDistanceThreshold (0.05);
+      seg.setInputCloud (g_cloud);
+      seg.segment (*inliers, *coefficients);
+
+      cout << "plane:" << endl;
+      for (std::vector<float>::iterator i = coefficients->values.begin();
+           i != coefficients->values.end();
+           ++i)
+        {
+          cout << "\t" << *i << endl;
+        }
+
+      float a = coefficients->values[0];
+      float b = coefficients->values[1];
+      float c = coefficients->values[2];
+      float d = coefficients->values[3];
+
+      // Don't process the frame if a plane can't be found.
+      if (boost::math::isnan<float>(a) || boost::math::isnan<float>(b) || boost::math::isnan<float>(c) || boost::math::isnan<float>(d)) {
+        continue;
+      }
+
+      pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
+      pcl::ExtractIndices<pcl::PointXYZRGBA> extract;
+      extract.setInputCloud (g_cloud);
+      extract.setIndices (inliers);
+      extract.setNegative (true);
+      extract.filter (*cloud);
+
+      project_points(coefficients, cloud);
+
+      write_to_image(cloud, img_2d_rgb, img_2d_width, img_2d_height);
+
+      pcl::PointXYZRGBA closestLeft;
+      float closestLeftDistance = -1;
+      pcl::PointXYZRGBA closestRight;
+      float closestRightDistance = -1;
+
+      for (pcl::PointCloud<pcl::PointXYZRGBA>::iterator i = cloud->begin(); i != cloud->end(); i++) {
+        float distance = vector_length(*i);
+        if (i->x < 0) {
+          if (closestLeftDistance == -1 || distance < closestLeftDistance) {
+            closestLeft = *i;
+            closestLeftDistance = distance;
+          }
+        } else {
+          if (closestRightDistance == -1 || distance < closestRightDistance) {
+            closestRight = *i;
+            closestRightDistance = distance;
+          }
+        }
+      }
+
+      if (closestLeftDistance != -1) {
+        cout << "closestLeft: " << closestLeft.x << ", " << closestLeft.z << endl;
+        add_mark_to_image(closestLeft, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
+      }
+      if (closestRightDistance != -1) {
+        cout << "closestRight: " << closestRight.x << ", " << closestRight.z << endl;
+        add_mark_to_image(closestRight, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
+      }
+
       pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (g_cloud);
       if (!cld->updatePointCloud (g_cloud, handler, "OpenNICloud"))
       {
@@ -561,6 +729,7 @@ main (int argc, char** argv)
         g_image->fillRGB (g_image->getWidth (), g_image->getHeight (), rgb_data);
         img->showRGBImage (rgb_data, g_image->getWidth (), g_image->getHeight ());
       }
+      img_2d->showRGBImage (img_2d_rgb, img_2d_width, img_2d_height);
       img_mutex.unlock ();
     }
 #endif
