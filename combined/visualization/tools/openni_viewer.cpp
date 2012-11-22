@@ -621,15 +621,6 @@ main (int argc, char** argv)
 
       pcl::PointXYZRGBA boxPoint;
       bool boxFound = detectPinkBox(g_cloud, boxPoint, p_cloud);//pcl::PointCloud<pcl::PointXYZRGBA>::Ptr());
-      std::vector<pcl::PointXYZRGBA> points;
-      points.push_back(boxPoint);
-
-      std::vector<pcl::PointXYZRGBA> results;
-
-      /* // apply plane transformation to boxPoint
-       project_points(ground_plane, points, results);
-       boxPoint = results.at(0);
-      */
 
       // replace with calls to sonic dog
       if (boxFound) printf("Destination detected at (%.2f, %.2f, %.2f)\n", boxPoint.x, boxPoint.y, boxPoint.z);
@@ -701,6 +692,16 @@ main (int argc, char** argv)
       if (closestRightDistance != -1) {
         cout << "closestRight: " << closestRight.x << ", " << closestRight.z << endl;
         add_mark_to_image(closestRight, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
+      }
+
+      // apply plane transformation to boxPoint
+      if (boxFound) {
+        std::vector<pcl::PointXYZRGBA> points;
+        points.push_back(boxPoint);
+        std::vector<pcl::PointXYZRGBA> results;
+        project_points(coefficients, points, results);
+        boxPoint = results.at(0);
+        add_mark_to_image(boxPoint, 0, 255, 0, img_2d_rgb, img_2d_width, img_2d_height);
       }
 
       pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
