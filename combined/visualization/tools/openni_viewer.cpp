@@ -703,10 +703,10 @@ main (int argc, char** argv)
         add_mark_to_image(closestRight, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
       }
 
-      pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (g_cloud);
-      if (!cld->updatePointCloud (g_cloud, handler, "OpenNICloud"))
+      pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
+      if (!cld->updatePointCloud (p_cloud, handler, "OpenNICloud"))
       {
-        cld->addPointCloud (g_cloud, handler, "OpenNICloud");
+        cld->addPointCloud (p_cloud, handler, "OpenNICloud");
         cld->resetCameraViewpoint ("OpenNICloud");
       }
       cld_mutex.unlock ();
