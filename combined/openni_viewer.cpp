@@ -289,7 +289,7 @@ detectPinkBox(
     }
   }
 
-  if (totalWeight = 0) detected = false;
+  if (totalWeight == 0) detected = false;
 
   float avgX = 0;
   float avgY = 0;
