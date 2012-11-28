@@ -651,6 +651,8 @@ main (int argc, char** argv)
 
       // Don't process the frame if a plane can't be found.
       if (boost::math::isnan<float>(a) || boost::math::isnan<float>(b) || boost::math::isnan<float>(c) || boost::math::isnan<float>(d)) {
+        cld_mutex.unlock ();
+        boost::this_thread::sleep (boost::posix_time::microseconds (100));
         continue;
       }
 
