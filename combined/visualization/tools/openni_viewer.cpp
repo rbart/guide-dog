@@ -535,6 +535,12 @@ add_mark_to_image(int x, int z, char r, char g, char b, unsigned char* img_2d_rg
   }
 }
 
+void
+coordinate_to_sonic_dog(int x, int z, int camera_location_x, int camera_location_z, SonicDog::Coordinate &output) {
+  output.first = camera_location_x - x;
+  output.second = z - camera_location_z;
+}
+
 /* ---[ */
 int
 main (int argc, char** argv)
@@ -693,6 +699,7 @@ main (int argc, char** argv)
       std::vector<cv::KeyPoint> keypoints;
       blob_detector->detect(sim, keypoints);
 
+      int camera_location_x = img_2d_width / 2;
       int camera_location_z = img_2d_height;
 
       SonicDog::CoordinateVect obstacles;
@@ -700,9 +707,12 @@ main (int argc, char** argv)
         cv::KeyPoint k = *it;
         if (k.pt.y + 150 > camera_location_z) {
           add_mark_to_image(k.pt.x, k.pt.y, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
-          obstacles.push_back(SonicDog::Coordinate(k.pt.x, k.pt.y));
+          SonicDog::Coordinate c;
+          coordinate_to_sonic_dog(k.pt.x, k.pt.y, camera_location_x, camera_location_z, c);
+          obstacles.push_back(c);
         }
       }
+      dog.alertObstacles(obstacles);
 
       // apply plane transformation to boxPoint
       if (boxFound) {
