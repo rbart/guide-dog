@@ -51,6 +51,8 @@ private:
 		ALuint source;
 		ALuint buffer;
 		bool once;
+		float x;
+		float y;
 	} SoundSrc;
 
 	typedef struct {
@@ -63,6 +65,9 @@ private:
 	typedef std::queue< SoundSrc * > SoundQ;
 	typedef std::vector< pthread_t > ThreadVect;
 	typedef std::map< size_t, bool > BoolMap;
+
+	static const float MAX_D = 20.0f;
+	float start_d;
 
 	size_t num_threads_;
 
@@ -105,6 +110,7 @@ private:
 	void displayAlutError( const char *msg, ALenum err );
 	size_t addObject( float x, float z, obj_t type );
 	float calculatePause( ALuint source );
+	float calculatePitch( ALuint source );
 
 };
 
