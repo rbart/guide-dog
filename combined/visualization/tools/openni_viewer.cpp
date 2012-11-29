@@ -693,9 +693,15 @@ main (int argc, char** argv)
       std::vector<cv::KeyPoint> keypoints;
       blob_detector->detect(sim, keypoints);
 
+      int camera_location_z = img_2d_height;
+
+      SonicDog::CoordinateVect obstacles;
       for(std::vector<cv::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
         cv::KeyPoint k = *it;
-        add_mark_to_image(k.pt.x, k.pt.y, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
+        if (k.pt.y + 150 > camera_location_z) {
+          add_mark_to_image(k.pt.x, k.pt.y, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
+          obstacles.push_back(SonicDog::Coordinate(k.pt.x, k.pt.y));
+        }
       }
 
       // apply plane transformation to boxPoint
