@@ -535,11 +535,6 @@ add_mark_to_image(int x, int z, char r, char g, char b, unsigned char* img_2d_rg
   }
 }
 
-float
-vector_length(pcl::PointXYZRGBA &point) {
-  return sqrt(pow(point.x, 2) + pow(point.z, 2));
-}
-
 /* ---[ */
 int
 main (int argc, char** argv)
