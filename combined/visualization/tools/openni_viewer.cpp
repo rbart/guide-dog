@@ -665,33 +665,42 @@ main (int argc, char** argv)
 
       write_to_image(cloud, img_2d_rgb, img_2d_width, img_2d_height);
 
-      pcl::PointXYZRGBA closestLeft;
-      float closestLeftDistance = -1;
-      pcl::PointXYZRGBA closestRight;
-      float closestRightDistance = -1;
+      // Detect blobs in image
+      cv::SimpleBlobDetector::Params params;
+      params.minDistBetweenBlobs = 50.0f;
+      params.filterByInertia = false;
+      params.filterByConvexity = false;
+      params.filterByColor = true;
+      params.filterByCircularity = false;
+      params.filterByArea = true;
+      params.minArea = 50;
+      params.maxArea = 100000;
+      params.minThreshold = 0.9f;
+      params.maxThreshold = 1.0f;
+      params.thresholdStep = 0.1f;
+      params.blobColor = 255;
+      // ... any other params you don't want default value
 
-      for (pcl::PointCloud<pcl::PointXYZRGBA>::iterator i = cloud->begin(); i != cloud->end(); i++) {
-        float distance = vector_length(*i);
-        if (i->x < 0) {
-          if (closestLeftDistance == -1 || distance < closestLeftDistance) {
-            closestLeft = *i;
-            closestLeftDistance = distance;
-          }
-        } else {
-          if (closestRightDistance == -1 || distance < closestRightDistance) {
-            closestRight = *i;
-            closestRightDistance = distance;
-          }
+      cv::Ptr<cv::FeatureDetector> blob_detector = new cv::SimpleBlobDetector(params);
+      blob_detector->create("SimpleBlob");
+
+      IplImage * sim = cvCreateImage(cvSize(img_2d_width, img_2d_height), IPL_DEPTH_8U, 1);
+      unsigned char * simData = reinterpret_cast<unsigned char *>(sim->imageData);
+
+      for (int x = 0; x < img_2d_width; x++) {
+        for (int z = 0; z < img_2d_height; z++) {
+          int pos_2d = img_2d_width * 3 * z + 3 * x;
+          int pos_blob = img_2d_width * z + x;
+          simData[pos_blob] = img_2d_rgb[pos_2d];
         }
       }
 
-      if (closestLeftDistance != -1) {
-        cout << "closestLeft: " << closestLeft.x << ", " << closestLeft.z << endl;
-        add_mark_to_image(closestLeft, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
-      }
-      if (closestRightDistance != -1) {
-        cout << "closestRight: " << closestRight.x << ", " << closestRight.z << endl;
-        add_mark_to_image(closestRight, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
+      std::vector<cv::KeyPoint> keypoints;
+      blob_detector->detect(sim, keypoints);
+
+      for(std::vector<cv::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
+        cv::KeyPoint k = *it;
+        add_mark_to_image(k.pt.x, k.pt.y, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
       }
 
       // apply plane transformation to boxPoint
