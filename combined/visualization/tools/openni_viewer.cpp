@@ -87,7 +87,7 @@ boost::shared_ptr<openni_wrapper::Image> g_image;
 
 // Destination detection variables
 bool dest_verbose = true;
-SonicDog dog(1);
+SonicDog dog(2);
 pcl::PointCloud<pcl::PointXYZRGBA>::Ptr p_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
 double defR = 192.21;
 double defG = 96.32;
