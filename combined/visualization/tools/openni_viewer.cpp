@@ -721,7 +721,11 @@ main (int argc, char** argv)
         std::vector<pcl::PointXYZRGBA> results;
         project_points(coefficients, points, results);
         boxPoint = results.at(0);
-        add_mark_to_image(transform_x_coord(boxPoint.x), transform_z_coord(boxPoint.z, img_2d_height), 0, 255, 0, img_2d_rgb, img_2d_width, img_2d_height);
+        int newX = transform_x_coord(boxPoint.x);
+        int newZ = transform_z_coord(boxPoint.z, img_2d_height);
+        SonicDog::Coordinate c;
+        coordinate_to_sonic_dog(newX, newZ, camera_location_x, camera_location_z, c);
+        add_mark_to_image(newX, newZ, 0, 255, 0, img_2d_rgb, img_2d_width, img_2d_height);
       }
 
       pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
