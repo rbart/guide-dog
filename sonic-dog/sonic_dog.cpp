@@ -1,14 +1,15 @@
 #include <iostream>
 #include <cmath>
 #include <string>
+#include <cstdio>
 
 #include "sonic_dog.h"
 
 SonicDog::SonicDog( size_t threads ) {
 	num_threads_ = threads;
 
-	//alutInit( NULL, NULL );
-	//checkError( "alutInit", ALUT );
+	// alutInit( NULL, NULL );
+	// checkError( "alutInit", ALUT );
 	alutInitWithoutContext( NULL, NULL );
 
 	device_ = alcOpenDevice( NULL );
@@ -21,7 +22,7 @@ SonicDog::SonicDog( size_t threads ) {
 	}
 
 	// set the position of the listener at the origin
-	alListener3f( AL_POSITION, 0.0f, 0.0f, 1.0f );
+	alListener3f( AL_POSITION, 0.0f, 0.0f, 0.0f );
 	alListener3f( AL_VELOCITY, 0.0f, 0.0f, 0.0f );
 	// ALfloat ori[] = { 0.0f, 0.0f, 1.0f };
 	// alListenerfv( AL_ORIENTATION, ori );
@@ -48,6 +49,16 @@ SonicDog::~SonicDog() {
 	}
 	pthread_mutex_unlock( &q_lock_ );
 
+	// destroy the locks
+	pthread_mutex_destroy( &play_lock_ );
+	pthread_mutex_destroy( &sources_lock_ );
+	pthread_mutex_destroy( &remove_lock_ );
+	pthread_mutex_destroy( &pause_lock_ );
+	pthread_mutex_destroy( &q_lock_ );
+	pthread_mutex_destroy( &turns_lock_ );
+	pthread_cond_destroy( &empty_q_lock_ );
+	pthread_cond_destroy( &pause_cond_lock_ );
+
 	alcMakeContextCurrent( NULL );
 	alcDestroyContext( context_ );
 	alcCloseDevice( device_ );
@@ -57,6 +68,7 @@ SonicDog::~SonicDog() {
 
 size_t SonicDog::addBeacon( float x, float z ) {
 	checkError( "alutCreateBufferWavform", ALUT );
+	start_d = z;
 	return addObject( x, z, BEAC );
 }
 
@@ -74,8 +86,9 @@ size_t SonicDog::addObject( float x, float z, obj_t type ) {
 	checkError( "alGenSources", AL );
 	switch ( type ) {
 		case BEAC: {
-			src->buffer = alutCreateBufferWaveform( ALUT_WAVEFORM_WHITENOISE, 500.0f, 0.0f, 0.5f );
-			alSourcef( src->source, AL_GAIN, 1.0f );
+			// src->buffer = alutCreateBufferWaveform( ALUT_WAVEFORM_WHITENOISE, 500.0f, 0.0f, 0.5f );
+			src->buffer = alutCreateBufferFromFile( "./sonar.wav" );
+			alSourcef( src->source, AL_GAIN, 5.0f );
 			break;
 		}
 		case OBS: {
@@ -87,7 +100,7 @@ size_t SonicDog::addObject( float x, float z, obj_t type ) {
 	}
 
 	alSourcef( src->source, AL_PITCH, 1 );
-	alSource3f( src->source, AL_POSITION, x, z, 0.0f );
+	alSource3f( src->source, AL_POSITION, 5.0f*x, 0.0f, z );
 	alSource3f( src->source, AL_VELOCITY, 0.0f, 0.0f, 0.0f );
 	alSourcei( src->source, AL_LOOPING, AL_FALSE );
 	alSourcei( src->source, AL_BUFFER, src->buffer );
@@ -106,6 +119,8 @@ size_t SonicDog::addObject( float x, float z, obj_t type ) {
 	pthread_mutex_lock( &pause_lock_ );
 	paused_.insert( BoolMap::value_type( src->id, false ) );
 	pthread_mutex_unlock( &pause_lock_ );
+
+	// alSourcePlay( src->source );
 
 	// then insert it into the play queue
 	pthread_mutex_lock( &q_lock_ );
@@ -193,14 +208,18 @@ void SonicDog::startPlaying() {
 
 		once = src->once;
 
-		// figure out if this source is initially paused
-		pthread_mutex_unlock( &pause_lock_ );
-
 		do {
 			// play the sound at least once
 			if ( once ) pthread_mutex_lock( &turns_lock_ );
+
+			ALfloat x, y, z;
+			alGetSource3f( src->source, AL_POSITION, &x, &y, &z );
+			// printf( "source pos:\t%f, %f, %f\n", x, y, z );
+
 			alSourcePlay( src->source );
-			alutSleep( calculatePause( src->source ) );
+			// alutSleep( calculatePause( src->source ) );
+			alutSleep( 1.5 );
+			alSourcef( src->source, AL_PITCH, calculatePitch( src->source ) );
 			if ( once ) pthread_mutex_unlock( &turns_lock_ );
 
 			// check that we can keep playing
@@ -210,6 +229,8 @@ void SonicDog::startPlaying() {
 
 			if ( !once ) {
 				bool paused;
+
+				// check if we're paused
 				pthread_mutex_lock( &pause_lock_ );
 				BoolMap::iterator p = paused_.find( src->id );
 				assert( p != paused_.end() );
@@ -222,6 +243,7 @@ void SonicDog::startPlaying() {
 				}
 				pthread_mutex_unlock( &pause_lock_ );
 
+				// check if we've been removed
 				pthread_mutex_lock( &remove_lock_ );
 				BoolMap::iterator cont = removed_.find( src->id );
 				if ( cont != removed_.end() ) {
@@ -231,13 +253,16 @@ void SonicDog::startPlaying() {
 			}
 		} while ( can_play && !once && !removed );
 
-		// remove this source from the source map if it's in there
-		pthread_mutex_lock( &sources_lock_ );
-		SoundMap::iterator itr = sources_.find( src->id );
-		if ( itr != sources_.end() ) {
-			sources_.erase( itr );
+		// remove this source if wasn't meant to be played only once
+		if ( !src->once ) {
+			// remove this source from the source map if it's in there
+			pthread_mutex_lock( &sources_lock_ );
+			SoundMap::iterator itr = sources_.find( src->id );
+			if ( itr != sources_.end() ) {
+				sources_.erase( itr );
+			}
+			pthread_mutex_unlock( &sources_lock_ );
 		}
-		pthread_mutex_unlock( &sources_lock_ );
 
 		// we're done with the source so clean it up
 		alDeleteSources( 1, &(src->source) );
@@ -333,14 +358,25 @@ void SonicDog::displayAlutError( const char *msg, ALenum err ) {
 float SonicDog::calculatePause( ALuint source ) { 
 	ALfloat x, y, z;
 	alGetSource3f( source, AL_POSITION, &x, &y, &z );
+	x /= 5.0f;
 	float d = sqrt( (x*x) + (z*z) );
 
-	return ( -1.0f*exp( 0.4f*d ) ) / ( -1.0f*exp( 0.4f*d ) - 1 );
+	return ( -1.5f*exp( 0.6f*d ) ) / ( -1.0f*exp( 0.6f*d ) - 1.5f );
+}
+
+float SonicDog::calculatePitch( ALuint source ) {
+	ALfloat x, y, z;
+	alGetSource3f( source, AL_POSITION, &x, &y, &z );
+	x /= 5.0f;
+	float d = sqrt( (x*x) + (z*z) );
+
+	float p = ( 1.0f - (d / start_d) ) / 2.0f;
+	return p + 1.0f;
 }
 
 void SonicDog::alertObstacles( const CoordinateVect &obstacles, bool diff ) {
 	int size = obstacles.size();
-	checkError( "alGenSources", AL );
+	// checkError( "alGenSources", AL );
 	pthread_mutex_lock( &q_lock_ );
 	for ( int i = 0; i < size; i++ ) {
 		SoundSrc *src = new SoundSrc;

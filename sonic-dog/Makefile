@@ -3,6 +3,9 @@ CFLAGS= -Wall -g -I/opt/openal/include -L/opt/openal/lib
 OBJS= test.o sim.o sonic_dog.o
 PROGRAMS = sim
 
+vsim: sonic_dog.o vsim.o
+	$(CC) $(CFLAGS) -o vsim vsim.o sonic_dog.o -lopenal -lalut -lpthread -lGL -lglut
+
 sonic: sonic_dog.cpp sonic_dog.h
 	$(CC) $(CFLAGS) -c sonic_dog.cpp
 
