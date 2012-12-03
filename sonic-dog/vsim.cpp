@@ -38,11 +38,9 @@ void specialKeys(int key, int x, int y);
 void perspectiveGL( GLdouble fovY, GLdouble aspect, GLdouble zNear, GLdouble zFar );
 float getDistance( ALfloat source[] );
 float getAngle( ALfloat source[] );
-void alertTimeAndSpace();
 void alertTime();
-void alertTimeAngle();
-void alertSpace();
 void displayDot ( void );
+void checkObstacles();
 
 #define NUM_BUFFERS 3
 #define NUM_SOURCES 3
@@ -64,10 +62,10 @@ float obs2_dist;
 ALfloat pink_box_pos[]={ 0.0, 0.0, -4.0};
 ALfloat pink_box_vel[]={ 0.0, 0.0, 0.0};
 
-ALuint	buffer[NUM_BUFFERS];
-ALuint	source[NUM_SOURCES];
-ALuint  environment[NUM_ENVIRONMENTS];
-int 	GLwin;
+ALuint buffer[NUM_BUFFERS];
+ALuint source[NUM_SOURCES];
+ALuint environment[NUM_ENVIRONMENTS];
+int GLwin;
 
 ALsizei size,freq;
 ALenum 	format;
@@ -89,7 +87,7 @@ int main(int argc, char** argv) {
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);   
 	glutInitWindowSize(800,800);
 
-	sonny = new SonicDog( 4 );
+	sonny = new SonicDog( 3 );
 
 	GLwin = glutCreateWindow("Sonic Dog Demo") ;
 	init();
@@ -97,6 +95,7 @@ int main(int argc, char** argv) {
 	glutKeyboardFunc(keyboard) ;
 	glutSpecialFunc(specialKeys);
 	glutReshapeFunc(reshape) ;
+	glutIdleFunc( checkObstacles );
 
 	glutMainLoop();
 
@@ -110,6 +109,7 @@ void init(void) {
 	float side = 2.0f*(pink_box_pos[0] - listenerPos[0]);
 	float dist = 2.0f*(listenerPos[2] - pink_box_pos[2]);
 	pb = sonny->addBeacon( side, dist );
+	sonny->pauseObject( pb );
 
 	last_alert = 0;
 	obs1_dist = getDistance( obs1_pos );
@@ -141,6 +141,12 @@ void display(void) {
 	glutWireCube(0.5) ;
 	glPopMatrix() ;
 
+	glPushMatrix() ;
+	glTranslatef(obs2_pos[0],obs2_pos[1],obs2_pos[2]) ;
+	glColor3f(0.0,1.0,0.0) ;
+	glutSolidCube(0.3) ;
+	glPopMatrix() ;
+
 	// pink box
 	glPushMatrix() ;
 	glTranslatef(pink_box_pos[0],pink_box_pos[1],pink_box_pos[2]) ;
@@ -155,11 +161,13 @@ void display(void) {
 	glutWireCube(0.5) ;
 	glPopMatrix() ;
 	
-	glPushMatrix() ;
-	glTranslatef(listenerPos[0],listenerPos[1],listenerPos[2]) ;
-  glColor3f(1.0,1.0,1.0) ;
-	glutWireCube(0.2) ;
-	glPopMatrix() ;
+	// cone
+	// glPushMatrix() ;
+	// glTranslatef(listenerPos[0],listenerPos[1],listenerPos[2]) ;
+  // glColor3f(1.0,1.0,1.0) ;
+	// //glutWireCone( 0.5543, 1.0, 50, 50 );
+	// glutWireCube( 0.4 );
+	// glPopMatrix();
 
 	glPopMatrix() ;
 	glutSwapBuffers() ;
@@ -170,13 +178,13 @@ void display(void) {
 // ===================================================================
 void reshape(int w, int h) // the reshape function
 {
-   glViewport(0,0,(GLsizei)w,(GLsizei)h) ;
-   glMatrixMode(GL_PROJECTION) ;
-   glLoadIdentity() ;
-   perspectiveGL(60.0,(GLfloat)w/(GLfloat)h,1.0,30.0) ;
-   glMatrixMode(GL_MODELVIEW) ;
-   glLoadIdentity() ;
-   glTranslatef(0.0,0.0,-6.6) ;
+  glViewport(0,0,(GLsizei)w,(GLsizei)h) ;
+  glMatrixMode(GL_PROJECTION) ;
+  glLoadIdentity() ;
+  perspectiveGL(60.0,(GLfloat)w/(GLfloat)h,1.0,30.0) ;
+  glMatrixMode(GL_MODELVIEW) ;
+  glLoadIdentity() ;
+  glTranslatef(0.0,0.0,-6.6) ;
 }
 
 
@@ -185,10 +193,14 @@ void reshape(int w, int h) // the reshape function
 // ===================================================================
 void keyboard(unsigned char key, int x, int y) {
 	switch(key) {
-		case '1':
+		case '1': {
+			sonny->pauseObject( pb );
 			break;
-		case '2':
+		}
+		case '2': {
+			sonny->unpauseObject( pb );
 			break;
+		}
 		case '3':
 			break;
 		case '4':
@@ -242,11 +254,11 @@ void specialKeys(int key, int x, int y) {
 				}
     }
 		// location information about the pink box
-		float dist = 2.0f*(listenerPos[2] - pink_box_pos[2]);
-		float side = 2.0f*(pink_box_pos[0] - listenerPos[0]);
+		float dist = listenerPos[2] - pink_box_pos[2];
+		float side = pink_box_pos[0] - listenerPos[0];
 		sonny->changeObjectLoc( pb, side, dist );					
 
-		alertTime();
+		// alertTime();
 
 		glutPostRedisplay() ;
 }
@@ -265,47 +277,24 @@ float getDistance( ALfloat source[] ) {
 }
 
 float getAngle( ALfloat source[] ) {
-	printf( "list: %f\t src: %f\n", listenerPos[0], source[0] );
-	float x = listenerPos[0] - source[0];
+	// printf( "list: %f\t src: %f\n", listenerPos[0], source[0] );
+	float x = source[0] - listenerPos[0];
 	float z = ( source[2] - listenerPos[2] )*-1.0f;
 	float angle = atan2( z, x );
-	printf( "x: %f\t z: %f\t angle: %f\n", x, z, angle );
+	// printf( "x: %f\t z: %f\t angle: %f\n", x, z, angle );
 	return angle;
-}
-
-void alertTimeAndSpace() {
-	float dist, side;
-	if ( time( NULL ) - last_alert > alert_inter ) {
-		SonicDog::CoordinateVect obstacles;
-		if ( getDistance( obs1_pos ) < min( 1.0f, obs1_dist ) ) {
-			dist = listenerPos[2] - obs1_pos[2];
-			side = obs1_pos[0] - listenerPos[0];
-			obstacles.push_back( SonicDog::Coordinate( side, dist ) );
-		}
-		if ( getDistance( obs2_pos ) < min( 1.0f, obs2_dist ) ) {
-			dist = listenerPos[2] - obs2_pos[2];
-			side = obs2_pos[0] - listenerPos[0];
-			obstacles.push_back( SonicDog::Coordinate( side, dist ) );
-		}
-		if ( obstacles.size() > 0 ) {
-			sonny->alertObstacles( obstacles );
-		}
-		last_alert = time( NULL );
-		obs1_dist = getDistance( obs1_pos );
-		obs2_dist = getDistance( obs2_pos );
-	}
 }
 
 void alertTime() {
 	float dist, side;
 	if ( time( NULL ) - last_alert > alert_inter ) {
 		SonicDog::CoordinateVect obstacles;
-		// if ( getAngle( obs1_pos ) > angle && getDistance( obs1_pos ) < 1.5f ) {
+		// if ( getAngle( obs1_pos ) > angle && getDistance( obs1_pos ) < 1.0f ) {
 		// 	dist = listenerPos[2] - obs1_pos[2];
 		// 	side = obs1_pos[0] - listenerPos[0];
 		// 	obstacles.push_back( SonicDog::Coordinate( side, dist ) );
 		// }
-		if ( getAngle( obs2_pos ) > angle && getDistance( obs2_pos ) < 1.5f ) {
+		if ( getAngle( obs2_pos ) > angle && getDistance( obs2_pos ) < 1.0f ) {
 			dist = listenerPos[2] - obs2_pos[2];
 			side = obs2_pos[0] - listenerPos[0];
 			obstacles.push_back( SonicDog::Coordinate( side, dist ) );
@@ -319,27 +308,6 @@ void alertTime() {
 	}
 }
 
-void alertTimeAngle() {
+void checkObstacles() {
+	alertTime();
 }
-
-void alertSpace() {
-	float dist, side;
-	SonicDog::CoordinateVect obstacles;
-	if ( getDistance( obs1_pos ) < min( 1.0f, obs1_dist ) ) {
-		dist = listenerPos[2] - obs1_pos[2];
-		side = obs1_pos[0] - listenerPos[0];
-		obstacles.push_back( SonicDog::Coordinate( side, dist ) );
-	}
-	if ( getDistance( obs2_pos ) < min( 1.0f, obs2_dist ) ) {
-		dist = listenerPos[2] - obs2_pos[2];
-		side = obs2_pos[0] - listenerPos[0];
-		obstacles.push_back( SonicDog::Coordinate( side, dist ) );
-	}
-	if ( obstacles.size() > 0 ) {
-		sonny->alertObstacles( obstacles );
-	}
-	last_alert = time( NULL );
-	obs1_dist = getDistance( obs1_pos );
-	obs2_dist = getDistance( obs2_pos );
-}
-

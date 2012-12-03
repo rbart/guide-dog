@@ -52,7 +52,7 @@ private:
 		ALuint buffer;
 		bool once;
 		float x;
-		float y;
+		float z;
 	} SoundSrc;
 
 	typedef struct {
@@ -66,7 +66,10 @@ private:
 	typedef std::vector< pthread_t > ThreadVect;
 	typedef std::map< size_t, bool > BoolMap;
 
-	static const float MAX_D = 20.0f;
+	// the number of radians to indicate a hard left/right
+	static const float HARD_DIR = 1.3962634;
+	// the 20 degree arc that's considered in the middle
+	static const float STRAIGHT = 0.34906585;
 	float start_d;
 
 	size_t num_threads_;
@@ -111,6 +114,8 @@ private:
 	size_t addObject( float x, float z, obj_t type );
 	float calculatePause( ALuint source );
 	float calculatePitch( ALuint source );
+	float getAngle( float x, float z );
+	void placeInRegion( float x, float z, ALfloat *pos );
 
 };
 
