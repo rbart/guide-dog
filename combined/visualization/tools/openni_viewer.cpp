@@ -537,8 +537,8 @@ add_mark_to_image(int x, int z, char r, char g, char b, unsigned char* img_2d_rg
 
 void
 coordinate_to_sonic_dog(int x, int z, int camera_location_x, int camera_location_z, SonicDog::Coordinate &output) {
-  output.first = camera_location_x - x;
-  output.second = z - camera_location_z;
+  output.first = x - camera_location_x;
+  output.second = camera_location_z - z;
 }
 
 /* ---[ */
