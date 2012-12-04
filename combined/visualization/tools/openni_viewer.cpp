@@ -713,7 +713,6 @@ main (int argc, char** argv)
         boxPoint = results.at(0);
         boxXTransformed = transform_x_coord(boxPoint.x);
         boxZTransformed = transform_z_coord(boxPoint.z, img_2d_height);
-        cout << "dest: (" << boxXTransformed << ", " << boxZTransformed << ")" << endl;
         SonicDog::Coordinate c;
         coordinate_to_sonic_dog(boxXTransformed, boxZTransformed, camera_location_x, camera_location_z, c);
         add_mark_to_image(boxXTransformed, boxZTransformed, 0, 255, 0, img_2d_rgb, img_2d_width, img_2d_height);
@@ -722,7 +721,6 @@ main (int argc, char** argv)
       SonicDog::CoordinateVect obstacles;
       for(std::vector<cv::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
         cv::KeyPoint k = *it;
-        cout << "obstacle: (" << k.pt.x << ", " << k.pt.y << ")" << endl;
         if (k.pt.y + 150 > camera_location_z) {
           if (!boxFound || abs(k.pt.x - boxXTransformed) > 15 || abs(k.pt.y - boxZTransformed) > 15) {
             add_mark_to_image(k.pt.x, k.pt.y, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
