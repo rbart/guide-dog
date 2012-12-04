@@ -9,8 +9,10 @@ SonicDog::SonicDog( size_t threads ) {
 	num_threads_ = threads;
 
 	// alutInit( NULL, NULL );
-	// checkError( "alutInit", ALUT );
+	// checkError( "clearing messages", AL );
+	alGetError();
 	alutInitWithoutContext( NULL, NULL );
+	checkError( "alutInitWithoutContext", ALUT );
 
 	device_ = alcOpenDevice( NULL );
 	checkError( "alcOpenDevice", AL );
@@ -36,9 +38,9 @@ SonicDog::SonicDog( size_t threads ) {
 	pthread_mutex_init( &remove_lock_, NULL );
 	pthread_mutex_init( &pause_lock_, NULL );
 	pthread_mutex_init( &q_lock_, NULL );
+	pthread_mutex_init( &turns_lock_, NULL );
 	pthread_cond_init( &empty_q_lock_, NULL );
 	pthread_cond_init( &pause_cond_lock_, NULL );
-	pthread_mutex_init( &turns_lock_, NULL );
 }
 
 SonicDog::~SonicDog() {
@@ -82,8 +84,11 @@ size_t SonicDog::addObject( float x, float z, obj_t type ) {
 	SoundSrc *src = new SoundSrc;
 	src->id = object_id_;
 	src->once = false;
+	src->x = x;
+	src->z = z;
 	alGenSources( 1, &(src->source) );
 	checkError( "alGenSources", AL );
+
 	switch ( type ) {
 		case BEAC: {
 			// src->buffer = alutCreateBufferWaveform( ALUT_WAVEFORM_WHITENOISE, 500.0f, 0.0f, 0.5f );
@@ -100,10 +105,14 @@ size_t SonicDog::addObject( float x, float z, obj_t type ) {
 	}
 
 	alSourcef( src->source, AL_PITCH, 1 );
-	alSource3f( src->source, AL_POSITION, 5.0f*x, 0.0f, z );
 	alSource3f( src->source, AL_VELOCITY, 0.0f, 0.0f, 0.0f );
 	alSourcei( src->source, AL_LOOPING, AL_FALSE );
 	alSourcei( src->source, AL_BUFFER, src->buffer );
+
+	// move the location of the source in the OpenAL world to one of our discrete zones
+	ALfloat pos[] = { 0.0, 0.0, 0.0 };
+	placeInRegion( x, z, pos );
+	alSourcefv( src->source, AL_POSITION, pos );
 
 	// insert the src into our map
 	pthread_mutex_lock( &sources_lock_ );
@@ -142,7 +151,9 @@ void SonicDog::changeObjectLoc( size_t id, float x, float z ) {
 	pthread_mutex_unlock( &sources_lock_ );
 	assert( beacon != sources_.end() );
 
-	alSource3f( beacon->second->source, AL_POSITION, x, 0.0f, z );
+	ALfloat pos[] = { 0.0, 0.0, 0.0 };
+	placeInRegion( x, z, pos );
+	alSourcefv( beacon->second->source, AL_POSITION, pos );
 }
 
 bool SonicDog::getSoundPosition( const size_t id, ALfloat *x, ALfloat *y, ALfloat *z ) {
@@ -282,6 +293,16 @@ void SonicDog::stop( void ) {
 	exit_ = true;
 	pthread_mutex_unlock( &q_lock_ );
 	pthread_cond_broadcast( &empty_q_lock_ );
+	
+	// indicate removal and then unpause anything in the paused map
+	pthread_mutex_lock( &pause_lock_ );
+	BoolMap::iterator p;
+	for ( p = paused_.begin(); p != paused_.end(); p++ ) {
+		removeObject( p->first );
+		p->second = false;
+	}
+	pthread_mutex_unlock( &pause_lock_ );
+	pthread_cond_broadcast( &pause_cond_lock_ );
 
 	for ( size_t i = 0; i < threads_.size(); i++ ) {
 		pthread_join( threads_[i], 0 );
@@ -358,7 +379,6 @@ void SonicDog::displayAlutError( const char *msg, ALenum err ) {
 float SonicDog::calculatePause( ALuint source ) { 
 	ALfloat x, y, z;
 	alGetSource3f( source, AL_POSITION, &x, &y, &z );
-	x /= 5.0f;
 	float d = sqrt( (x*x) + (z*z) );
 
 	return ( -1.5f*exp( 0.6f*d ) ) / ( -1.0f*exp( 0.6f*d ) - 1.5f );
@@ -367,7 +387,6 @@ float SonicDog::calculatePause( ALuint source ) {
 float SonicDog::calculatePitch( ALuint source ) {
 	ALfloat x, y, z;
 	alGetSource3f( source, AL_POSITION, &x, &y, &z );
-	x /= 5.0f;
 	float d = sqrt( (x*x) + (z*z) );
 
 	float p = ( 1.0f - (d / start_d) ) / 2.0f;
@@ -378,9 +397,16 @@ void SonicDog::alertObstacles( const CoordinateVect &obstacles, bool diff ) {
 	int size = obstacles.size();
 	// checkError( "alGenSources", AL );
 	pthread_mutex_lock( &q_lock_ );
+	if ( play_q_.size() > 0 ) {
+		pthread_mutex_unlock( &q_lock_ );
+		return;
+	}
+
 	for ( int i = 0; i < size; i++ ) {
 		SoundSrc *src = new SoundSrc;
 		src->once = true;
+		src->x = obstacles[i].first;
+		src->z = obstacles[i].second;
 		alGenSources( 1, &(src->source) );
 		if ( diff ) {
 			src->buffer = alutCreateBufferWaveform( ALUT_WAVEFORM_IMPULSE, i*100.0f+200.0f, 0.0f, 0.5f );
@@ -388,8 +414,13 @@ void SonicDog::alertObstacles( const CoordinateVect &obstacles, bool diff ) {
 			src->buffer = alutCreateBufferWaveform( ALUT_WAVEFORM_IMPULSE, 200.0f, 0.0f, 0.5f );
 		}
 
+		// move the location of the source in the OpenAL world to one of our discrete zones
+		ALfloat pos[] = { 0.0, 0.0, 0.0 };
+		placeInRegion( src->x, src->z, pos );
+		alSourcefv( src->source, AL_POSITION, pos );
+
 		alSourcef( src->source, AL_PITCH, 1 );
-		alSource3f( src->source, AL_POSITION, obstacles[i].first, 0.0f, obstacles[i].second );
+		// alSource3f( src->source, AL_POSITION, obstacles[i].first, 0.0f, obstacles[i].second );
 		alSource3f( src->source, AL_VELOCITY, 0.0f, 0.0f, 0.0f );
 		alSourcei( src->source, AL_LOOPING, AL_FALSE );
 		alSourcei( src->source, AL_BUFFER, src->buffer );
@@ -398,7 +429,6 @@ void SonicDog::alertObstacles( const CoordinateVect &obstacles, bool diff ) {
 	}
 	pthread_mutex_unlock( &q_lock_ );
 	pthread_cond_broadcast( &empty_q_lock_ );
-
 }
 
 void *SonicDog::worker_fn( void *data ) {
@@ -435,4 +465,23 @@ void SonicDog::unpauseObject( size_t id ) {
 	}
 	pthread_mutex_unlock( &pause_lock_ );
 	pthread_cond_broadcast( &pause_cond_lock_ );
+}
+
+float SonicDog::getAngle( float x, float z ) {
+	return atan2( z, x );
+}
+
+void SonicDog::placeInRegion( float x, float z, ALfloat *pos ) {
+	float angle = getAngle( x, z );
+	// printf( "SD: x: %f\t z: %f\t angle: %f\n", x, z, angle );
+	if ( angle < HARD_DIR ) {
+		// source is to the right of listener
+		pos[0] = z;
+	} else if ( angle > ( HARD_DIR + STRAIGHT ) ) {
+		// source is to the left of listener
+		pos[0] = -z;
+	} else {
+		// source is in front of the listener
+		pos[2] = z;
+	}
 }
