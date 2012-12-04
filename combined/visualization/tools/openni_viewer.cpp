@@ -58,6 +58,8 @@
 #include <pcl/filters/project_inliers.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
+#include "boost/date_time/posix_time/posix_time.hpp"
+
 #define SHOW_FPS 1
 #if SHOW_FPS
 #define FPS_CALC(_WHAT_) \
@@ -541,6 +543,23 @@ coordinate_to_sonic_dog(int x, int z, int camera_location_x, int camera_location
   output.second = z - camera_location_z;
 }
 
+bool init = true;
+boost::posix_time::ptime last = boost::posix_time::microsec_clock::local_time();
+
+long tock() {
+  boost::posix_time::ptime now  = boost::posix_time::microsec_clock::local_time();
+  if (init) {
+    init = false;
+    last = now;
+    return 0;
+  }
+  else {
+    boost::posix_time::time_duration diff = now - last;
+    last = now;
+    return diff.total_milliseconds();
+  }
+}
+
 /* ---[ */
 int
 main (int argc, char** argv)
@@ -556,7 +575,8 @@ main (int argc, char** argv)
       }
     }
   }
-
+  
+  
   EventHelper event_helper;
   std::string device_id = "";
   pcl::console::parse_argument (argc, argv, "-dev", device_id);
@@ -608,18 +628,23 @@ main (int argc, char** argv)
     // Add the cloud
     if (g_cloud && cld_mutex.try_lock ())
     {
+      printf("begin frame, (%ld)\n", tock());
       if (!cld_init)
       {
 	// Initialize destination detection data
+	dog.start();
 	destination_init(g_cloud);
 	
         cld->getRenderWindow ()->SetSize (g_cloud->width, g_cloud->height);
         cld->getRenderWindow ()->SetPosition (g_cloud->width, 0);
         cld_init = !cld_init;
       }
+      printf("init ms: %ld\n", tock());
 
       pcl::PointXYZRGBA boxPoint;
       bool boxFound = detectPinkBox(g_cloud, boxPoint, p_cloud);//pcl::PointCloud<pcl::PointXYZRGBA>::Ptr());
+
+      printf("box detection ms: %ld\n", tock());
 
       // replace with calls to sonic dog
       if (boxFound) printf("Destination detected at (%.2f, %.2f, %.2f)\n", boxPoint.x, boxPoint.y, boxPoint.z);
@@ -633,7 +658,9 @@ main (int argc, char** argv)
       seg.setMethodType (pcl::SAC_RANSAC);
       seg.setDistanceThreshold (0.1);
       seg.setInputCloud (g_cloud);
+      printf("plane init: %ld\n", tock());
       seg.segment (*inliers, *coefficients);
+      printf("plane .segment: %ld\n", tock());
 
       cout << "plane:" << endl;
       for (std::vector<float>::iterator i = coefficients->values.begin();
@@ -655,6 +682,8 @@ main (int argc, char** argv)
         continue;
       }
 
+      printf("plane postproc: %ld\n", tock());
+
       pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
       pcl::ExtractIndices<pcl::PointXYZRGBA> extract;
       extract.setInputCloud (g_cloud);
@@ -664,7 +693,11 @@ main (int argc, char** argv)
 
       project_points(coefficients, cloud);
 
+      printf("point projection: %ld\n", tock());
+
       write_to_image(cloud, img_2d_rgb, img_2d_width, img_2d_height);
+
+      printf("draw proj image: %ld\n", tock());
 
       // Detect blobs in image
       cv::SimpleBlobDetector::Params params;
@@ -699,6 +732,8 @@ main (int argc, char** argv)
       std::vector<cv::KeyPoint> keypoints;
       blob_detector->detect(sim, keypoints);
 
+      printf("detect proj blob: %ld\n", tock());
+
       int camera_location_x = img_2d_width / 2;
       int camera_location_z = img_2d_height;
 
@@ -712,7 +747,7 @@ main (int argc, char** argv)
           obstacles.push_back(c);
         }
       }
-      dog.alertObstacles(obstacles);
+      if (obstacles.size() > 0 ) dog.alertObstacles(obstacles);
 
       // apply plane transformation to boxPoint
       if (boxFound) {
@@ -726,7 +761,17 @@ main (int argc, char** argv)
         SonicDog::Coordinate c;
         coordinate_to_sonic_dog(newX, newZ, camera_location_x, camera_location_z, c);
         add_mark_to_image(newX, newZ, 0, 255, 0, img_2d_rgb, img_2d_width, img_2d_height);
+	
+	printf("detected box at %.2f, %.2f\n", c.first, c.second);
+
+	if (beacon == -1) beacon = dog.addBeacon(c.first, c.second);
+	else dog.changeObjectLoc(beacon, c.first, c.second);
+      } else { // !boxFound
+	dog.removeObject(beacon);
+	beacon = -1;
       }
+      
+      printf("beacon: %d, audio: %ld\n", beacon, tock());
 
       pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
       if (!cld->updatePointCloud (p_cloud, handler, "OpenNICloud"))
