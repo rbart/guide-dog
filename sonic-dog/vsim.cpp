@@ -76,7 +76,9 @@ SonicDog *sonny;
 size_t pb;
 time_t last_alert;
 const time_t alert_inter = 0;
-const float angle = 1.06465;
+const float angle61 = 1.06465;
+const float angle119 = 2.07694181;
+const float WID = 0.5f;
 
 // ===================================================================
 // void main(int argc, char** argv)
@@ -123,42 +125,36 @@ void init(void) {
 // void display()
 // ===================================================================
 void display(void) {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) ;
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glPushMatrix() ;
-	glRotatef(15.0,1.0,0.0,0.0) ;
+	glRotatef(15.0,1.0,0.0,0.0);
 
 	// obstacle
-	glPushMatrix() ;
-	glTranslatef(obs1_pos[0],obs1_pos[1],obs1_pos[2]) ;
-	glColor3f(0.0,1.0,0.0) ;
-	glutWireCube(0.5) ;
-	glPopMatrix() ;
+	glPushMatrix();
+	glTranslatef(obs1_pos[0],obs1_pos[1],obs1_pos[2]);
+	glColor3f(0.0,1.0,0.0);
+	glutWireCube(WID);
+	glPopMatrix();
 
 	// obstacle
-	glPushMatrix() ;
-	glTranslatef(obs2_pos[0],obs2_pos[1],obs2_pos[2]) ;
-	glColor3f(0.0,1.0,0.0) ;
-	glutWireCube(0.5) ;
-	glPopMatrix() ;
-
-	glPushMatrix() ;
-	glTranslatef(obs2_pos[0],obs2_pos[1],obs2_pos[2]) ;
-	glColor3f(0.0,1.0,0.0) ;
-	glutSolidCube(0.3) ;
-	glPopMatrix() ;
+	glPushMatrix();
+	glTranslatef(obs2_pos[0],obs2_pos[1],obs2_pos[2]);
+	glColor3f(0.0,1.0,0.0);
+	glutWireCube(WID);
+	glPopMatrix();
 
 	// pink box
 	glPushMatrix() ;
 	glTranslatef(pink_box_pos[0],pink_box_pos[1],pink_box_pos[2]) ;
 	glColor3f(1.0,0.2,0.6) ;
-	glutWireCube(0.5) ;
+	glutWireCube(WID) ;
 	glPopMatrix() ;
 
 	//the listener
 	glPushMatrix() ;
 	glTranslatef(listenerPos[0],listenerPos[1],listenerPos[2]) ;
   glColor3f(1.0,1.0,1.0) ;
-	glutWireCube(0.5) ;
+	glutWireCube(WID) ;
 	glPopMatrix() ;
 	
 	// cone
@@ -286,15 +282,17 @@ float getAngle( ALfloat source[] ) {
 }
 
 void alertTime() {
-	float dist, side;
+	float dist, side, angle;
 	if ( time( NULL ) - last_alert > alert_inter ) {
 		SonicDog::CoordinateVect obstacles;
-		// if ( getAngle( obs1_pos ) > angle && getDistance( obs1_pos ) < 1.0f ) {
-		// 	dist = listenerPos[2] - obs1_pos[2];
-		// 	side = obs1_pos[0] - listenerPos[0];
-		// 	obstacles.push_back( SonicDog::Coordinate( side, dist ) );
-		// }
-		if ( getAngle( obs2_pos ) > angle && getDistance( obs2_pos ) < 1.0f ) {
+		angle = getAngle( obs1_pos );
+		if ( angle > angle61 && angle < angle119 && getDistance( obs1_pos ) < 1.5f ) {
+			dist = listenerPos[2] - obs1_pos[2];
+			side = obs1_pos[0] - listenerPos[0];
+			obstacles.push_back( SonicDog::Coordinate( side, dist ) );
+		}
+		angle = getAngle( obs2_pos );
+		if ( angle > angle61 && angle < angle119 && getDistance( obs2_pos ) < 1.5f ) {
 			dist = listenerPos[2] - obs2_pos[2];
 			side = obs2_pos[0] - listenerPos[0];
 			obstacles.push_back( SonicDog::Coordinate( side, dist ) );
