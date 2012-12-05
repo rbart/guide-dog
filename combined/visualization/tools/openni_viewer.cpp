@@ -117,6 +117,8 @@ unsigned char * simData;
 cv::Ptr<cv::FeatureDetector> blob_detector;
 // end Destination detection variables
 
+bool showObstacles = true;
+
 // Initialization routine for destination variables
 void
 destination_init(pcl::PointCloud<pcl::PointXYZRGBA>::ConstPtr g_cloud) {
@@ -444,6 +446,9 @@ keyboard_callback (const pcl::visualization::KeyboardEvent& event, void* cookie)
   if (event.keyDown() && event.getKeyCode() == 32) {
 
     recalibrate = true; 
+  } else if (event.keyDown() && event.getKeyCode() == 'o') {
+    cout << "flipping obstacles" << endl;
+    showObstacles = !showObstacles;
   }
 }
 
@@ -650,87 +655,90 @@ main (int argc, char** argv)
       if (boxFound) printf("Destination detected at (%.2f, %.2f, %.2f)\n", boxPoint.x, boxPoint.y, boxPoint.z);
 
       pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-      pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-      // Create the segmentation object
-      pcl::SACSegmentation<pcl::PointXYZRGBA> seg;
-      seg.setOptimizeCoefficients (true);
-      seg.setModelType (pcl::SACMODEL_PLANE);
-      seg.setMethodType (pcl::SAC_RANSAC);
-      seg.setDistanceThreshold (0.1);
-      seg.setInputCloud (g_cloud);
-      printf("plane init: %ld\n", tock());
-      seg.segment (*inliers, *coefficients);
-      printf("plane .segment: %ld\n", tock());
-
-      cout << "plane:" << endl;
-      for (std::vector<float>::iterator i = coefficients->values.begin();
-           i != coefficients->values.end();
-           ++i)
-        {
-          cout << "\t" << *i << endl;
-        }
-
-      float a = coefficients->values[0];
-      float b = coefficients->values[1];
-      float c = coefficients->values[2];
-      float d = coefficients->values[3];
-
-      // Don't process the frame if a plane can't be found.
-      if (boost::math::isnan<float>(a) || boost::math::isnan<float>(b) || boost::math::isnan<float>(c) || boost::math::isnan<float>(d)) {
-        cld_mutex.unlock ();
-        boost::this_thread::sleep (boost::posix_time::microseconds (100));
-        continue;
-      }
-
-      printf("plane postproc: %ld\n", tock());
-
-      pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
-      pcl::ExtractIndices<pcl::PointXYZRGBA> extract;
-      extract.setInputCloud (g_cloud);
-      extract.setIndices (inliers);
-      extract.setNegative (true);
-      extract.filter (*cloud);
-
-      project_points(coefficients, cloud);
-
-      printf("point projection: %ld\n", tock());
-
-      write_to_image(cloud, img_2d_rgb, img_2d_width, img_2d_height);
-
-      printf("draw proj image: %ld\n", tock());
-
-      // Detect blobs in image
-      cv::SimpleBlobDetector::Params params;
-      params.minDistBetweenBlobs = 50.0f;
-      params.filterByInertia = false;
-      params.filterByConvexity = false;
-      params.filterByColor = true;
-      params.filterByCircularity = false;
-      params.filterByArea = true;
-      params.minArea = 50;
-      params.maxArea = 100000;
-      params.minThreshold = 0.9f;
-      params.maxThreshold = 1.0f;
-      params.thresholdStep = 0.1f;
-      params.blobColor = 255;
-      // ... any other params you don't want default value
-
-      cv::Ptr<cv::FeatureDetector> blob_detector = new cv::SimpleBlobDetector(params);
-      blob_detector->create("SimpleBlob");
-
-      IplImage * sim = cvCreateImage(cvSize(img_2d_width, img_2d_height), IPL_DEPTH_8U, 1);
-      unsigned char * simData = reinterpret_cast<unsigned char *>(sim->imageData);
-
-      for (int x = 0; x < img_2d_width; x++) {
-        for (int z = 0; z < img_2d_height; z++) {
-          int pos_2d = img_2d_width * 3 * z + 3 * x;
-          int pos_blob = img_2d_width * z + x;
-          simData[pos_blob] = img_2d_rgb[pos_2d];
-        }
-      }
-
       std::vector<cv::KeyPoint> keypoints;
-      blob_detector->detect(sim, keypoints);
+
+      if (showObstacles) {
+        pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+        // Create the segmentation object
+        pcl::SACSegmentation<pcl::PointXYZRGBA> seg;
+        seg.setOptimizeCoefficients (true);
+        seg.setModelType (pcl::SACMODEL_PLANE);
+        seg.setMethodType (pcl::SAC_RANSAC);
+        seg.setDistanceThreshold (0.1);
+        seg.setInputCloud (g_cloud);
+        printf("plane init: %ld\n", tock());
+        seg.segment (*inliers, *coefficients);
+        printf("plane .segment: %ld\n", tock());
+
+        cout << "plane:" << endl;
+        for (std::vector<float>::iterator i = coefficients->values.begin();
+             i != coefficients->values.end();
+             ++i)
+          {
+            cout << "\t" << *i << endl;
+          }
+
+        float a = coefficients->values[0];
+        float b = coefficients->values[1];
+        float c = coefficients->values[2];
+        float d = coefficients->values[3];
+
+        // Don't process the frame if a plane can't be found.
+        if (boost::math::isnan<float>(a) || boost::math::isnan<float>(b) || boost::math::isnan<float>(c) || boost::math::isnan<float>(d)) {
+          cld_mutex.unlock ();
+          boost::this_thread::sleep (boost::posix_time::microseconds (100));
+          continue;
+        }
+
+        printf("plane postproc: %ld\n", tock());
+
+        pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
+        pcl::ExtractIndices<pcl::PointXYZRGBA> extract;
+        extract.setInputCloud (g_cloud);
+        extract.setIndices (inliers);
+        extract.setNegative (true);
+        extract.filter (*cloud);
+
+        project_points(coefficients, cloud);
+
+        printf("point projection: %ld\n", tock());
+
+        write_to_image(cloud, img_2d_rgb, img_2d_width, img_2d_height);
+
+        printf("draw proj image: %ld\n", tock());
+
+        // Detect blobs in image
+        cv::SimpleBlobDetector::Params params;
+        params.minDistBetweenBlobs = 50.0f;
+        params.filterByInertia = false;
+        params.filterByConvexity = false;
+        params.filterByColor = true;
+        params.filterByCircularity = false;
+        params.filterByArea = true;
+        params.minArea = 50;
+        params.maxArea = 100000;
+        params.minThreshold = 0.9f;
+        params.maxThreshold = 1.0f;
+        params.thresholdStep = 0.1f;
+        params.blobColor = 255;
+        // ... any other params you don't want default value
+
+        cv::Ptr<cv::FeatureDetector> blob_detector = new cv::SimpleBlobDetector(params);
+        blob_detector->create("SimpleBlob");
+
+        IplImage * sim = cvCreateImage(cvSize(img_2d_width, img_2d_height), IPL_DEPTH_8U, 1);
+        unsigned char * simData = reinterpret_cast<unsigned char *>(sim->imageData);
+
+        for (int x = 0; x < img_2d_width; x++) {
+          for (int z = 0; z < img_2d_height; z++) {
+            int pos_2d = img_2d_width * 3 * z + 3 * x;
+            int pos_blob = img_2d_width * z + x;
+            simData[pos_blob] = img_2d_rgb[pos_2d];
+          }
+        }
+
+        blob_detector->detect(sim, keypoints);
+      }
 
       printf("detect proj blob: %ld\n", tock());
 
@@ -751,7 +759,9 @@ main (int argc, char** argv)
         SonicDog::Coordinate c;
 
         coordinate_to_sonic_dog(boxXTransformed, boxZTransformed, camera_location_x, camera_location_z, c);
-        add_mark_to_image(boxXTransformed, boxZTransformed, 0, 255, 0, img_2d_rgb, img_2d_width, img_2d_height);	
+        if (showObstacles) {
+          add_mark_to_image(boxXTransformed, boxZTransformed, 0, 255, 0, img_2d_rgb, img_2d_width, img_2d_height);	
+        }
 	printf("detected box at %.2f, %.2f\n", c.first, c.second);
 
 	if (beacon == -1) beacon = dog.addBeacon(c.first, c.second);
@@ -762,20 +772,22 @@ main (int argc, char** argv)
       }      
       printf("beacon: %d, audio: %ld\n", beacon, tock());
 
-      SonicDog::CoordinateVect obstacles;
-      for(std::vector<cv::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
-        cv::KeyPoint k = *it;
-        if (k.pt.y + 150 > camera_location_z) {
-          if (!boxFound || abs(k.pt.x - boxXTransformed) > 15 || abs(k.pt.y - boxZTransformed) > 15) {
-            add_mark_to_image(k.pt.x, k.pt.y, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
-            SonicDog::Coordinate c;
-            coordinate_to_sonic_dog(k.pt.x, k.pt.y, camera_location_x, camera_location_z, c);
-            obstacles.push_back(c);
+      if (showObstacles) {
+        SonicDog::CoordinateVect obstacles;
+        for(std::vector<cv::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
+          cv::KeyPoint k = *it;
+          if (k.pt.y + 150 > camera_location_z) {
+            if (!boxFound || abs(k.pt.x - boxXTransformed) > 15 || abs(k.pt.y - boxZTransformed) > 15) {
+              add_mark_to_image(k.pt.x, k.pt.y, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
+              SonicDog::Coordinate c;
+              coordinate_to_sonic_dog(k.pt.x, k.pt.y, camera_location_x, camera_location_z, c);
+              obstacles.push_back(c);
+            }
           }
         }
-      }
 
-      if (obstacles.size() > 0 ) dog.alertObstacles(obstacles);
+        if (obstacles.size() > 0 ) dog.alertObstacles(obstacles);
+      }
 
       pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
       if (!cld->updatePointCloud (p_cloud, handler, "OpenNICloud"))
@@ -803,7 +815,9 @@ main (int argc, char** argv)
         g_image->fillRGB (g_image->getWidth (), g_image->getHeight (), rgb_data);
         img->showRGBImage (rgb_data, g_image->getWidth (), g_image->getHeight ());
       }
-      img_2d->showRGBImage (img_2d_rgb, img_2d_width, img_2d_height);
+      if (showObstacles) {
+        img_2d->showRGBImage (img_2d_rgb, img_2d_width, img_2d_height);
+      }
       img_mutex.unlock ();
     }
 #endif
