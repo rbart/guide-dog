@@ -578,6 +578,10 @@ main (int argc, char** argv)
         printHelp (argc, argv);
         return (-1);
       }
+      else if (std::string (argv[i]) == "-no-obs")
+      {
+        showObstacles = false;
+      }
     }
   }
   
