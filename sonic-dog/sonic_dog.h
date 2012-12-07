@@ -32,6 +32,8 @@ public:
 	void removeObject( size_t id );
 	void pauseObject( size_t id );
 	void unpauseObject( size_t id );
+	void turnRegionsOn( void );
+	void turnRegionsOff( void );
 
 private:
 	typedef std::vector< ALuint > AluVect;
@@ -83,6 +85,7 @@ private:
 	bool error_;
 	sdString error_str_;
 
+	bool regions_;
 	bool playing_;
 	bool exit_;
 	pthread_mutex_t play_lock_;

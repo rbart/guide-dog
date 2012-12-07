@@ -45,12 +45,13 @@ void checkObstacles();
 #define NUM_BUFFERS 3
 #define NUM_SOURCES 3
 #define NUM_ENVIRONMENTS 1
+#define BOX
 
 ALfloat listenerPos[]={0.0,0.0,4.0};
 ALfloat listenerVel[]={0.0,0.0,0.0};
 ALfloat	listenerOri[]={0.0,0.0,1.0, 0.0,1.0,0.0};
 
-ALfloat obs1_pos[]={ -2.0, 0.0, 0.0};
+ALfloat obs1_pos[]={ -2.0, 0.0, 1.0};
 ALfloat obs1_vel[]={ 0.0, 0.0, 0.0};
 float obs1_dist;
 
@@ -108,10 +109,12 @@ int main(int argc, char** argv) {
 // void init()
 // ===================================================================
 void init(void) {
-	float side = 2.0f*(pink_box_pos[0] - listenerPos[0]);
-	float dist = 2.0f*(listenerPos[2] - pink_box_pos[2]);
+#ifdef BOX
+	float side = pink_box_pos[0] - listenerPos[0];
+	float dist = listenerPos[2] - pink_box_pos[2];
 	pb = sonny->addBeacon( side, dist );
 	sonny->pauseObject( pb );
+#endif
 
 	last_alert = 0;
 	obs1_dist = getDistance( obs1_pos );
@@ -125,6 +128,7 @@ void init(void) {
 // void display()
 // ===================================================================
 void display(void) {
+	glLineWidth( 3.0 );
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glPushMatrix() ;
 	glRotatef(15.0,1.0,0.0,0.0);
@@ -143,12 +147,14 @@ void display(void) {
 	glutWireCube(WID);
 	glPopMatrix();
 
+#ifdef BOX
 	// pink box
 	glPushMatrix() ;
 	glTranslatef(pink_box_pos[0],pink_box_pos[1],pink_box_pos[2]) ;
 	glColor3f(1.0,0.2,0.6) ;
 	glutWireCube(WID) ;
 	glPopMatrix() ;
+#endif
 
 	//the listener
 	glPushMatrix() ;
@@ -197,10 +203,14 @@ void keyboard(unsigned char key, int x, int y) {
 			sonny->unpauseObject( pb );
 			break;
 		}
-		case '3':
+		case '3': {
+			sonny->turnRegionsOn();
 			break;
-		case '4':
+		}
+		case '4': {
+			sonny->turnRegionsOff();
 			break;
+		}
 		case '5':
 			break;
 		case '6':
@@ -249,10 +259,12 @@ void specialKeys(int key, int x, int y) {
           break;
 				}
     }
+#ifdef BOX
 		// location information about the pink box
 		float dist = listenerPos[2] - pink_box_pos[2];
 		float side = pink_box_pos[0] - listenerPos[0];
 		sonny->changeObjectLoc( pb, side, dist );					
+#endif
 
 		// alertTime();
 

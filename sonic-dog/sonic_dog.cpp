@@ -10,17 +10,21 @@ SonicDog::SonicDog( size_t threads ) {
 
 	// alutInit( NULL, NULL );
 	// checkError( "clearing messages", AL );
-	alGetError();
-	alutInitWithoutContext( NULL, NULL );
-	checkError( "alutInitWithoutContext", ALUT );
+	alutGetError();
+	if ( alutInitWithoutContext( NULL, NULL ) == AL_FALSE ) {
+		checkError( "alutInitWithoutContext", ALUT );
+	}
 
 	device_ = alcOpenDevice( NULL );
-	checkError( "alcOpenDevice", AL );
 	if ( device_ ) {
 		context_ = alcCreateContext( device_, NULL );
-		checkError( "alcCreateContext", AL );
-		alcMakeContextCurrent( context_ );
-		checkError( "alcMakeContextCurrent", AL );
+		if ( context_ ) {
+			alcMakeContextCurrent( context_ );
+		} else {
+			checkError( "alcCreateContext", AL );
+		}
+	} else {
+		checkError( "alcOpenDevice", AL );
 	}
 
 	// set the position of the listener at the origin
@@ -30,7 +34,7 @@ SonicDog::SonicDog( size_t threads ) {
 	// alListenerfv( AL_ORIENTATION, ori );
 
 	// initialize the object id
-	object_id_ = 0;
+	object_id_ = 1;
 
 	// initialize the locks
 	pthread_mutex_init( &play_lock_, NULL );
@@ -41,6 +45,9 @@ SonicDog::SonicDog( size_t threads ) {
 	pthread_mutex_init( &turns_lock_, NULL );
 	pthread_cond_init( &empty_q_lock_, NULL );
 	pthread_cond_init( &pause_cond_lock_, NULL );
+
+	// boolean to toggle regions on or off
+	regions_ = true;
 }
 
 SonicDog::~SonicDog() {
@@ -86,18 +93,26 @@ size_t SonicDog::addObject( float x, float z, obj_t type ) {
 	src->once = false;
 	src->x = x;
 	src->z = z;
+
+	alGetError();
 	alGenSources( 1, &(src->source) );
 	checkError( "alGenSources", AL );
 
 	switch ( type ) {
 		case BEAC: {
 			// src->buffer = alutCreateBufferWaveform( ALUT_WAVEFORM_WHITENOISE, 500.0f, 0.0f, 0.5f );
+			alutGetError();
 			src->buffer = alutCreateBufferFromFile( "./sonar.wav" );
+			checkError( "alutCreateBufferFromFile", ALUT );
+
 			alSourcef( src->source, AL_GAIN, 5.0f );
 			break;
 		}
 		case OBS: {
+			alutGetError();
 			src->buffer = alutCreateBufferWaveform( ALUT_WAVEFORM_SQUARE, object_id_*100.0f + 100.0f, 0.0f, 0.7f );
+			checkError( "alutCreateBufferWaveform", ALUT );
+
 			alSourcef( src->source, AL_GAIN, 0.1f );
 			break;
 		}
@@ -109,10 +124,14 @@ size_t SonicDog::addObject( float x, float z, obj_t type ) {
 	alSourcei( src->source, AL_LOOPING, AL_FALSE );
 	alSourcei( src->source, AL_BUFFER, src->buffer );
 
-	// move the location of the source in the OpenAL world to one of our discrete zones
-	ALfloat pos[] = { 0.0, 0.0, 0.0 };
-	placeInRegion( x, z, pos );
-	alSourcefv( src->source, AL_POSITION, pos );
+	if ( regions_ ) {
+		// move the location of the source in the OpenAL world to one of our discrete zones
+		ALfloat pos[] = { 0.0, 0.0, 0.0 };
+		placeInRegion( x, z, pos );
+		alSourcefv( src->source, AL_POSITION, pos );
+	} else {
+		alSource3f( src->source, AL_POSITION, x, 0.0f, z );
+	}
 
 	// insert the src into our map
 	pthread_mutex_lock( &sources_lock_ );
@@ -151,9 +170,13 @@ void SonicDog::changeObjectLoc( size_t id, float x, float z ) {
 	pthread_mutex_unlock( &sources_lock_ );
 	assert( beacon != sources_.end() );
 
-	ALfloat pos[] = { 0.0, 0.0, 0.0 };
-	placeInRegion( x, z, pos );
-	alSourcefv( beacon->second->source, AL_POSITION, pos );
+	if ( regions_ ) {
+		ALfloat pos[] = { 0.0, 0.0, 0.0 };
+		placeInRegion( x, z, pos );
+		alSourcefv( beacon->second->source, AL_POSITION, pos );
+	} else {
+		alSource3f( beacon->second->source, AL_POSITION, x, 0.0f, z );
+	}
 }
 
 bool SonicDog::getSoundPosition( const size_t id, ALfloat *x, ALfloat *y, ALfloat *z ) {
@@ -223,15 +246,16 @@ void SonicDog::startPlaying() {
 			// play the sound at least once
 			if ( once ) pthread_mutex_lock( &turns_lock_ );
 
-			ALfloat x, y, z;
-			alGetSource3f( src->source, AL_POSITION, &x, &y, &z );
-			// printf( "source pos:\t%f, %f, %f\n", x, y, z );
-
 			alSourcePlay( src->source );
 			// alutSleep( calculatePause( src->source ) );
-			alutSleep( 1.5 );
-			alSourcef( src->source, AL_PITCH, calculatePitch( src->source ) );
-			if ( once ) pthread_mutex_unlock( &turns_lock_ );
+			if ( once ) {
+				alutSleep( 1.2 );
+				pthread_mutex_unlock( &turns_lock_ );
+			} else {
+				alutSleep( 1.5 );
+				alSourcef( src->source, AL_PITCH, calculatePitch( src->source ) );
+			}
+
 
 			// check that we can keep playing
 			pthread_mutex_lock( &play_lock_ );
@@ -407,20 +431,33 @@ void SonicDog::alertObstacles( const CoordinateVect &obstacles, bool diff ) {
 		src->once = true;
 		src->x = obstacles[i].first;
 		src->z = obstacles[i].second;
+
+		alGetError();
 		alGenSources( 1, &(src->source) );
+		checkError( "alGenSources", AL );
+
+		alutGetError();
 		if ( diff ) {
 			src->buffer = alutCreateBufferWaveform( ALUT_WAVEFORM_IMPULSE, i*100.0f+200.0f, 0.0f, 0.5f );
 		} else {
-			src->buffer = alutCreateBufferWaveform( ALUT_WAVEFORM_IMPULSE, 200.0f, 0.0f, 0.5f );
+			// src->buffer = alutCreateBufferWaveform( ALUT_WAVEFORM_IMPULSE, 400.0f, 0.0f, 0.5f );
+			src->buffer = alutCreateBufferFromFile( "./drum.wav" );
 		}
 
-		// move the location of the source in the OpenAL world to one of our discrete zones
-		ALfloat pos[] = { 0.0, 0.0, 0.0 };
-		placeInRegion( src->x, src->z, pos );
-		alSourcefv( src->source, AL_POSITION, pos );
+		if ( src->buffer == AL_NONE ) {
+			checkError( "alutCreateBufferWaveform", ALUT );
+		}
+
+		if ( regions_ ) {
+			// move the location of the source in the OpenAL world to one of our discrete zones
+			ALfloat pos[] = { 0.0, 0.0, 0.0 };
+			placeInRegion( src->x, src->z, pos );
+			alSourcefv( src->source, AL_POSITION, pos );
+		} else {
+			alSource3f( src->source, AL_POSITION, src->x, 0.0f, src->z );
+		}
 
 		alSourcef( src->source, AL_PITCH, 1 );
-		// alSource3f( src->source, AL_POSITION, obstacles[i].first, 0.0f, obstacles[i].second );
 		alSource3f( src->source, AL_VELOCITY, 0.0f, 0.0f, 0.0f );
 		alSourcei( src->source, AL_LOOPING, AL_FALSE );
 		alSourcei( src->source, AL_BUFFER, src->buffer );
@@ -485,3 +522,12 @@ void SonicDog::placeInRegion( float x, float z, ALfloat *pos ) {
 		pos[2] = z;
 	}
 }
+
+void SonicDog::turnRegionsOn( void ) {
+	regions_ = true;
+}
+
+void SonicDog::turnRegionsOff( void ) {
+	regions_ = false;
+}
+
