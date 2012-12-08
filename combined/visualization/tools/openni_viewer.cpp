@@ -104,6 +104,7 @@ int minCount = 4000;
 bool recalibrate = false;
 bool shift = false;
 int beacon = -1;
+bool beacon_paused = false;
 int frameNum = 0;
 bool cld_init = false;
 int width;
@@ -449,7 +450,15 @@ keyboard_callback (const pcl::visualization::KeyboardEvent& event, void* cookie)
   } else if (event.keyDown() && event.getKeyCode() == 'o') {
     cout << "flipping obstacles" << endl;
     showObstacles = !showObstacles;
-  }
+  } else if (event.keyDown() && event.getKeyCode() == '3') {
+		if ( beacon > -1 ) {
+			dog.pauseObject( beacon );
+		}
+	} else if ( event.keyDown() && event.getKeyCode() == '4' ) {
+		if ( beacon > -1 ) {
+			dog.unpauseObject( beacon );
+		}
+	}
 }
 
 void 
@@ -766,13 +775,23 @@ main (int argc, char** argv)
         if (showObstacles) {
           add_mark_to_image(boxXTransformed, boxZTransformed, 0, 255, 0, img_2d_rgb, img_2d_width, img_2d_height);	
         }
-	printf("detected box at %.2f, %.2f\n", c.first, c.second);
+				printf("detected box at %.2f, %.2f\n", c.first, c.second);
 
-	if (beacon == -1) beacon = dog.addBeacon(c.first, c.second);
-	else dog.changeObjectLoc(beacon, c.first, c.second);
-      } else { // !boxFound
-	dog.removeObject(beacon);
-	beacon = -1;
+				if (beacon == -1) {
+					beacon = dog.addBeacon(c.first, c.second);
+					beacon_paused = false;
+				} else if ( !beacon_paused ) {
+					dog.changeObjectLoc(beacon, c.first, c.second);
+				} else if ( beacon_paused ) {
+					dog.changeObjectLoc(beacon, c.first, c.second);
+					dog.unpauseObject( beacon );
+					beacon_paused = false;
+				}
+			} else { // !boxFound
+				if ( beacon > -1 ) {
+					dog.pauseObject( beacon );
+					beacon_paused = true;
+				}
       }      
       printf("beacon: %d, audio: %ld\n", beacon, tock());
 
@@ -790,7 +809,7 @@ main (int argc, char** argv)
           }
         }
 
-        if (obstacles.size() > 0 ) dog.alertObstacles(obstacles);
+        if (obstacles.size() > 0 ) dog.alertObstacles(obstacles );
       }
 
       pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> handler (p_cloud);
