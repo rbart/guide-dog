@@ -52,6 +52,7 @@
 #include <opencv/cv.h>
 #include <cassert>
 #include "../../sonic-dog/sonic_dog.h"
+#include <ctime>
 
 #include <boost/math/special_functions/fpclassify.hpp>
 #include <pcl/filters/extract_indices.h>
@@ -71,7 +72,7 @@ do \
     ++count; \
     if (now - last >= 1.0) \
     { \
-      std::cout << "Average framerate("<< _WHAT_ << "): " << double(count)/double(now - last) << " Hz" <<  std::endl; \
+      if ( verbose ) std::cout << "Average framerate("<< _WHAT_ << "): " << double(count)/double(now - last) << " Hz" <<  std::endl; \
       count = 0; \
       last = now; \
     } \
@@ -119,6 +120,8 @@ cv::Ptr<cv::FeatureDetector> blob_detector;
 // end Destination detection variables
 
 bool showObstacles = true;
+bool verbose = false;
+int obs_distance = 10;
 
 // Initialization routine for destination variables
 void
@@ -258,10 +261,10 @@ detectPinkBox(
       bool inCenterY = y >= (7*height)/16 && y <= (9*height)/16;
       bool inCenter = inCenterX && inCenterY;
       if (inCenter && p.r == p.r && p.g == p.g && p.b == p.b) {
-	sumR += h;
-	sumG += s;
-	sumB += v;
-	numAvgRgb++;
+				sumR += h;
+				sumG += s;
+				sumB += v;
+				numAvgRgb++;
       }
     }
   }
@@ -279,17 +282,17 @@ detectPinkBox(
     
     for (int x = 0; x < width; x++) {
       for (int y = 0; y < height; y++) {
-	const pcl::PointXYZRGBA &p = g_cloud->at(x,y);
-	float dx = bestPoint.pt.x - x;
-	float dy = bestPoint.pt.y - y;
-	float d = sqrt(dx*dx + dy*dy);
-	if (d < bestPoint.size/2 && !(!p.x || p.x != p.x || !p.y || p.y != p.y || !p.z || p.z != p.z)) {
-	    
-	  sumX += p.x;
-	  sumY += p.y;
-	  sumZ += p.z;
-	  totalWeight += 1;
-	}
+				const pcl::PointXYZRGBA &p = g_cloud->at(x,y);
+				float dx = bestPoint.pt.x - x;
+				float dy = bestPoint.pt.y - y;
+				float d = sqrt(dx*dx + dy*dy);
+				if (d < bestPoint.size/2 && !(!p.x || p.x != p.x || !p.y || p.y != p.y || !p.z || p.z != p.z)) {
+						
+					sumX += p.x;
+					sumY += p.y;
+					sumZ += p.z;
+					totalWeight += 1;
+				}
       }
     }
   }
@@ -308,8 +311,7 @@ detectPinkBox(
     outputPoint.x = avgX;
     outputPoint.y = avgY;
     outputPoint.z = avgZ;
-    if (dest_verbose) 
-      printf("dest detected at (%.2f, %.2f, %.2f)\n", avgX, avgY, avgZ);
+    if (dest_verbose && verbose) printf("dest detected at (%.2f, %.2f, %.2f)\n", avgX, avgY, avgZ);
   }
 
   // copy similarity values to the point cloud for display
@@ -317,27 +319,28 @@ detectPinkBox(
     pcl::copyPointCloud(*g_cloud, *p_cloud);
     for (int x = 0; x < width; x++) {
       for (int y = 0; y < height; y++) {
-	int simColor = simData[y*width + x];
-	pcl::PointXYZRGBA &p = p_cloud->at(x,y);
-	bool nearKp = false;
+				int simColor = simData[y*width + x];
+				pcl::PointXYZRGBA &p = p_cloud->at(x,y);
+				bool nearKp = false;
 
-	for(std::vector<cv::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
-	  cv::KeyPoint k = *it;
-	  if (k.pt.x && k.pt.y && k.pt.x == k.pt.x) {
-	    double dx = k.pt.x - x;
-	    double dy = k.pt.y - y;
-	  
-	    if (sqrt(dx*dx + dy*dy) < (k.size / 2)) nearKp = true;
-	  }
-	}
-	if (nearKp) {
-	  p.g = (p.g + 255) / 2;
-	  p.r = p.b = (p.r + p.b) / 4;
-	} else {
-	  p.r = simColor; 
-	  p.g = simColor; 
-	  p.b = simColor; 
-	}
+				for(std::vector<cv::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
+					cv::KeyPoint k = *it;
+					if (k.pt.x && k.pt.y && k.pt.x == k.pt.x) {
+						double dx = k.pt.x - x;
+						double dy = k.pt.y - y;
+					
+						if (sqrt(dx*dx + dy*dy) < (k.size / 2)) nearKp = true;
+					}
+				}
+
+				if (nearKp) {
+					p.g = (p.g + 255) / 2;
+					p.r = p.b = (p.r + p.b) / 4;
+				} else {
+					p.r = simColor; 
+					p.g = simColor; 
+					p.b = simColor; 
+				}
       }
     }
   }
@@ -458,6 +461,8 @@ keyboard_callback (const pcl::visualization::KeyboardEvent& event, void* cookie)
 		if ( beacon > -1 ) {
 			dog.unpauseObject( beacon );
 		}
+	} else if ( event.keyDown() && event.getKeyCode() == 27 ) {
+		exit( 0 );
 	}
 }
 
@@ -591,6 +596,10 @@ main (int argc, char** argv)
       {
         showObstacles = false;
       }
+			else if ( std::string( argv[i] ) == "-v" ) 
+			{
+				verbose = true;
+			}
     }
   }
   
@@ -629,10 +638,13 @@ main (int argc, char** argv)
 #endif 
   
   interface->start ();
+	dog.start();
   bool cld_init = false;
+
+	time_t last_dest_update = 0;
+
   // Loop
-  while (!cld->wasStopped ())
-  {
+  while (!cld->wasStopped ()) {
     // Render and process events in the two interactors
     cld->spinOnce ();
 #if !((VTK_MAJOR_VERSION == 5)&&(VTK_MINOR_VERSION <= 4))
@@ -644,28 +656,25 @@ main (int argc, char** argv)
     frameNum++;
 
     // Add the cloud
-    if (g_cloud && cld_mutex.try_lock ())
-    {
-      printf("begin frame, (%ld)\n", tock());
-      if (!cld_init)
-      {
-	// Initialize destination detection data
-	dog.start();
-	destination_init(g_cloud);
+    if (g_cloud && cld_mutex.try_lock ()) {
+      if ( verbose ) printf("begin frame, (%ld)\n", tock());
+      if (!cld_init) {
+				// Initialize destination detection data
+				destination_init(g_cloud);
 	
         cld->getRenderWindow ()->SetSize (g_cloud->width, g_cloud->height);
         cld->getRenderWindow ()->SetPosition (g_cloud->width, 0);
         cld_init = !cld_init;
       }
-      printf("init ms: %ld\n", tock());
+      if ( verbose ) printf("init ms: %ld\n", tock());
 
       pcl::PointXYZRGBA boxPoint;
       bool boxFound = detectPinkBox(g_cloud, boxPoint, p_cloud);//pcl::PointCloud<pcl::PointXYZRGBA>::Ptr());
 
-      printf("box detection ms: %ld\n", tock());
+      if ( verbose ) printf("box detection ms: %ld\n", tock());
 
       // replace with calls to sonic dog
-      if (boxFound) printf("Destination detected at (%.2f, %.2f, %.2f)\n", boxPoint.x, boxPoint.y, boxPoint.z);
+      if (boxFound && verbose) printf("Destination detected at (%.2f, %.2f, %.2f)\n", boxPoint.x, boxPoint.y, boxPoint.z);
 
       pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
       std::vector<cv::KeyPoint> keypoints;
@@ -679,17 +688,19 @@ main (int argc, char** argv)
         seg.setMethodType (pcl::SAC_RANSAC);
         seg.setDistanceThreshold (0.1);
         seg.setInputCloud (g_cloud);
-        printf("plane init: %ld\n", tock());
+        if ( verbose ) printf("plane init: %ld\n", tock());
         seg.segment (*inliers, *coefficients);
-        printf("plane .segment: %ld\n", tock());
+        if ( verbose ) printf("plane .segment: %ld\n", tock());
 
-        cout << "plane:" << endl;
-        for (std::vector<float>::iterator i = coefficients->values.begin();
-             i != coefficients->values.end();
-             ++i)
-          {
-            cout << "\t" << *i << endl;
-          }
+				if ( verbose ) {
+					cout << "plane:" << endl;
+					for (std::vector<float>::iterator i = coefficients->values.begin();
+							 i != coefficients->values.end();
+							 ++i)
+						{
+							cout << "\t" << *i << endl;
+						}
+				}
 
         float a = coefficients->values[0];
         float b = coefficients->values[1];
@@ -703,7 +714,7 @@ main (int argc, char** argv)
           continue;
         }
 
-        printf("plane postproc: %ld\n", tock());
+        if ( verbose ) printf("plane postproc: %ld\n", tock());
 
         pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
         pcl::ExtractIndices<pcl::PointXYZRGBA> extract;
@@ -714,11 +725,11 @@ main (int argc, char** argv)
 
         project_points(coefficients, cloud);
 
-        printf("point projection: %ld\n", tock());
+        if ( verbose ) printf("point projection: %ld\n", tock());
 
         write_to_image(cloud, img_2d_rgb, img_2d_width, img_2d_height);
 
-        printf("draw proj image: %ld\n", tock());
+        if ( verbose ) printf("draw proj image: %ld\n", tock());
 
         // Detect blobs in image
         cv::SimpleBlobDetector::Params params;
@@ -753,7 +764,7 @@ main (int argc, char** argv)
         blob_detector->detect(sim, keypoints);
       }
 
-      printf("detect proj blob: %ld\n", tock());
+      if ( verbose ) printf("detect proj blob: %ld\n", tock());
 
       int camera_location_x = img_2d_width / 2;
       int camera_location_z = img_2d_height;
@@ -775,32 +786,36 @@ main (int argc, char** argv)
         if (showObstacles) {
           add_mark_to_image(boxXTransformed, boxZTransformed, 0, 255, 0, img_2d_rgb, img_2d_width, img_2d_height);	
         }
-				printf("detected box at %.2f, %.2f\n", c.first, c.second);
+				if ( verbose ) printf("detected box at %.2f, %.2f\n", c.first, c.second);
 
-				if (beacon == -1) {
-					beacon = dog.addBeacon(c.first, c.second);
-					beacon_paused = false;
-				} else if ( !beacon_paused ) {
-					dog.changeObjectLoc(beacon, c.first, c.second);
-				} else if ( beacon_paused ) {
-					dog.changeObjectLoc(beacon, c.first, c.second);
-					dog.unpauseObject( beacon );
-					beacon_paused = false;
+				if ( time( NULL ) - last_dest_update > 1 ) {
+					if (beacon == -1) {
+						beacon = dog.addBeacon(c.first, c.second);
+						beacon_paused = false;
+					} else if ( !beacon_paused ) {
+						dog.changeObjectLoc(beacon, c.first, c.second);
+					} else if ( beacon_paused ) {
+						dog.changeObjectLoc(beacon, c.first, c.second);
+						dog.unpauseObject( beacon );
+						beacon_paused = false;
+					}
+					last_dest_update = time( NULL );
 				}
 			} else { // !boxFound
 				if ( beacon > -1 ) {
 					dog.pauseObject( beacon );
 					beacon_paused = true;
 				}
-      }      
-      printf("beacon: %d, audio: %ld\n", beacon, tock());
+      }
+
+      if ( verbose ) printf("beacon: %d, audio: %ld\n", beacon, tock());
 
       if (showObstacles) {
         SonicDog::CoordinateVect obstacles;
         for(std::vector<cv::KeyPoint>::iterator it = keypoints.begin(); it != keypoints.end(); ++it) {
           cv::KeyPoint k = *it;
           if (k.pt.y + 150 > camera_location_z) {
-            if (!boxFound || abs(k.pt.x - boxXTransformed) > 15 || abs(k.pt.y - boxZTransformed) > 15) {
+            if (!boxFound || abs(k.pt.x - boxXTransformed) > obs_distance || abs(k.pt.y - boxZTransformed) > obs_distance) {
               add_mark_to_image(k.pt.x, k.pt.y, 255, 0, 0, img_2d_rgb, img_2d_width, img_2d_height);
               SonicDog::Coordinate c;
               coordinate_to_sonic_dog(k.pt.x, k.pt.y, camera_location_x, camera_location_z, c);
