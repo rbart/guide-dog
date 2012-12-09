@@ -776,8 +776,10 @@ main (int argc, char** argv)
         std::vector<pcl::PointXYZRGBA> points;
         points.push_back(boxPoint);
         std::vector<pcl::PointXYZRGBA> results;
-        project_points(coefficients, points, results);
-        boxPoint = results.at(0);
+        if (showObstacles) {
+          project_points(coefficients, points, results);
+          boxPoint = results.at(0);
+        }
         boxXTransformed = transform_x_coord(boxPoint.x);
         boxZTransformed = transform_z_coord(boxPoint.z, img_2d_height);
         SonicDog::Coordinate c;
