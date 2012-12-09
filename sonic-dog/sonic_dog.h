@@ -33,7 +33,9 @@ public:
 	void pauseObject( size_t id );
 	void unpauseObject( size_t id );
 	void turnRegionsOn( void );
-	void turnRegionsOff( void );
+	void turnRegularOn( void );
+	void turnCutoffOn( void );
+	void playArrived( void );
 
 private:
 	typedef std::vector< ALuint > AluVect;
@@ -55,6 +57,7 @@ private:
 		bool once;
 		float x;
 		float z;
+		float pause;
 	} SoundSrc;
 
 	typedef struct {
@@ -69,9 +72,12 @@ private:
 	typedef std::map< size_t, bool > BoolMap;
 
 	// the number of radians to indicate a hard left/right
-	static const float HARD_DIR = 1.3962634;
+	static const float ANGLE_80 = 1.3962634;
 	// the 20 degree arc that's considered in the middle
-	static const float STRAIGHT = 0.34906585;
+	static const float ARC_20 = 0.34906585;
+	static const float ANGLE_70 = 1.22173048;
+	static const float ARC_40 = 0.698131701;
+	static const float ARC_30 = 0.523598776;
 	float start_d;
 
 	size_t num_threads_;
@@ -86,6 +92,7 @@ private:
 	sdString error_str_;
 
 	bool regions_;
+	bool cutoff_;
 	bool playing_;
 	bool exit_;
 	pthread_mutex_t play_lock_;
@@ -119,6 +126,7 @@ private:
 	float calculatePitch( ALuint source );
 	float getAngle( float x, float z );
 	void placeInRegion( float x, float z, ALfloat *pos );
+	void placeInCutoff( float x, float z, ALfloat *pos );
 
 };
 

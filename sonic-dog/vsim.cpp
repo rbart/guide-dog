@@ -80,6 +80,9 @@ const time_t alert_inter = 0;
 const float angle61 = 1.06465;
 const float angle119 = 2.07694181;
 const float WID = 0.5f;
+const float ANGLE_80 = 1.3962634;
+const float ARC_20 = 0.34906585;
+bool arrived = false;
 
 // ===================================================================
 // void main(int argc, char** argv)
@@ -88,7 +91,7 @@ int main(int argc, char** argv) {
 	//initialise glut
 	glutInit(&argc, argv) ;
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);   
-	glutInitWindowSize(800,800);
+	glutInitWindowSize(500,500);
 
 	sonny = new SonicDog( 3 );
 
@@ -113,7 +116,6 @@ void init(void) {
 	float side = pink_box_pos[0] - listenerPos[0];
 	float dist = listenerPos[2] - pink_box_pos[2];
 	pb = sonny->addBeacon( side, dist );
-	sonny->pauseObject( pb );
 #endif
 
 	last_alert = 0;
@@ -208,11 +210,13 @@ void keyboard(unsigned char key, int x, int y) {
 			break;
 		}
 		case '4': {
-			sonny->turnRegionsOff();
+			sonny->turnRegularOn();
 			break;
 		}
-		case '5':
+		case '5': {
+			sonny->turnCutoffOn();
 			break;
+		}
 		case '6':
 			break;
 		case 27: {
@@ -259,14 +263,22 @@ void specialKeys(int key, int x, int y) {
           break;
 				}
     }
+		float angle = getAngle( pink_box_pos );
+		float len = getDistance( pink_box_pos );
+		if ( angle > ANGLE_80 && angle < ( ANGLE_80 + ARC_20 ) && len < .7 && !arrived ) {
+			sonny->playArrived();
+			sonny->pauseObject( pb );
+			arrived = true;
+		} else if ( angle > ANGLE_80 && angle < ( ANGLE_80 + ARC_20 ) && len > .7 ) {
+			sonny->unpauseObject( pb );
+		}
+
 #ifdef BOX
 		// location information about the pink box
 		float dist = listenerPos[2] - pink_box_pos[2];
 		float side = pink_box_pos[0] - listenerPos[0];
 		sonny->changeObjectLoc( pb, side, dist );					
 #endif
-
-		// alertTime();
 
 		glutPostRedisplay() ;
 }
