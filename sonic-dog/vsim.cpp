@@ -263,15 +263,6 @@ void specialKeys(int key, int x, int y) {
           break;
 				}
     }
-		float angle = getAngle( pink_box_pos );
-		float len = getDistance( pink_box_pos );
-		if ( angle > ANGLE_80 && angle < ( ANGLE_80 + ARC_20 ) && len < .7 && !arrived ) {
-			sonny->playArrived();
-			sonny->pauseObject( pb );
-			arrived = true;
-		} else if ( angle > ANGLE_80 && angle < ( ANGLE_80 + ARC_20 ) && len > .7 ) {
-			sonny->unpauseObject( pb );
-		}
 
 #ifdef BOX
 		// location information about the pink box
