@@ -107,7 +107,7 @@ size_t SonicDog::addObject( float x, float z, obj_t type ) {
 			src->buffer = alutCreateBufferFromFile( "./beeps.wav" );
 			checkError( "alutCreateBufferFromFile", ALUT );
 
-			alSourcef( src->source, AL_GAIN, 5.0f );
+			alSourcef( src->source, AL_GAIN, 10.0f );
 			break;
 		}
 		case OBS: {
@@ -447,10 +447,13 @@ void SonicDog::alertObstacles( const CoordinateVect &obstacles, bool diff ) {
 
 		alutGetError();
 		if ( diff ) {
-			src->buffer = alutCreateBufferWaveform( ALUT_WAVEFORM_IMPULSE, i*100.0f+200.0f, 0.0f, 0.5f );
+			// src->buffer = alutCreateBufferWaveform( ALUT_WAVEFORM_IMPULSE, i*100.0f+200.0f, 0.0f, 0.5f );
+			src->buffer = alutCreateBufferFromFile( "./ding.wav" );
+			alSourcef( src->source, AL_PITCH, .2*i+1 );
 		} else {
 			// src->buffer = alutCreateBufferWaveform( ALUT_WAVEFORM_IMPULSE, 400.0f, 0.0f, 0.5f );
 			src->buffer = alutCreateBufferFromFile( "./ding.wav" );
+			alSourcef( src->source, AL_PITCH, 1 );
 		}
 
 		if ( src->buffer == AL_NONE ) {
@@ -460,8 +463,8 @@ void SonicDog::alertObstacles( const CoordinateVect &obstacles, bool diff ) {
 		if ( regions_ ) {
 			// move the location of the source in the OpenAL world to one of our discrete zones
 			ALfloat pos[] = { 0.0, 0.0, 0.0 };
-			placeInRegion( src->x, src->z, pos );
-			alSourcefv( src->source, AL_POSITION, pos );
+			bool front = placeInRegion( src->x, src->z, pos );
+			if ( front ) alSourcefv( src->source, AL_POSITION, pos );
 		} else if ( cutoff_ ) {
 			ALfloat pos[] = { 0.0, 0.0, 0.0 };
 			placeInCutoff( src->x, src->z, pos );
@@ -470,7 +473,7 @@ void SonicDog::alertObstacles( const CoordinateVect &obstacles, bool diff ) {
 			alSource3f( src->source, AL_POSITION, src->x, 0.0f, src->z );
 		}
 
-		alSourcef( src->source, AL_PITCH, 1 );
+		alSourcef( src->source, AL_GAIN, 10.0f );
 		alSource3f( src->source, AL_VELOCITY, 0.0f, 0.0f, 0.0f );
 		alSourcei( src->source, AL_LOOPING, AL_FALSE );
 		alSourcei( src->source, AL_BUFFER, src->buffer );
@@ -521,18 +524,21 @@ float SonicDog::getAngle( float x, float z ) {
 	return atan2( z, x );
 }
 
-void SonicDog::placeInRegion( float x, float z, ALfloat *pos ) {
+bool SonicDog::placeInRegion( float x, float z, ALfloat *pos ) {
 	float angle = getAngle( x, z );
 	// printf( "SD: x: %f\t z: %f\t angle: %f\n", x, z, angle );
 	if ( angle < ANGLE_80 ) {
 		// source is to the right of listener
 		pos[0] = z;
+		return false;
 	} else if ( angle > ( ANGLE_80 + ARC_20 ) ) {
 		// source is to the left of listener
 		pos[0] = -z;
+		return false;
 	} else {
 		// source is in front of the listener
 		pos[2] = z;
+		return true;
 	}
 }
 

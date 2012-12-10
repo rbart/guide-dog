@@ -125,7 +125,7 @@ private:
 	float calculatePause( ALuint source );
 	float calculatePitch( ALuint source );
 	float getAngle( float x, float z );
-	void placeInRegion( float x, float z, ALfloat *pos );
+	bool placeInRegion( float x, float z, ALfloat *pos );
 	void placeInCutoff( float x, float z, ALfloat *pos );
 
 };
