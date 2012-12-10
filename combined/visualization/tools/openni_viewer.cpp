@@ -453,17 +453,21 @@ keyboard_callback (const pcl::visualization::KeyboardEvent& event, void* cookie)
   } else if (event.keyDown() && event.getKeyCode() == 'o') {
     cout << "flipping obstacles" << endl;
     showObstacles = !showObstacles;
-  } else if (event.keyDown() && event.getKeyCode() == '3') {
+  } else if (event.keyDown() && event.getKeyCode() == '4') {
 		if ( beacon > -1 ) {
 			dog.pauseObject( beacon );
 		}
-	} else if ( event.keyDown() && event.getKeyCode() == '4' ) {
+	} else if ( event.keyDown() && event.getKeyCode() == '5' ) {
 		if ( beacon > -1 ) {
 			dog.unpauseObject( beacon );
 		}
 	} else if ( event.keyDown() && event.getKeyCode() == 27 ) {
 		exit( 0 );
 	}
+  else if (event.keyDown() && event.getKeyCode() == 'd' && beacon > -1) {
+    dog.removeObject(beacon);
+    beacon = -1;
+  }
 }
 
 void 
