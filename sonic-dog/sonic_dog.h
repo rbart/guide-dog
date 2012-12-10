@@ -36,6 +36,8 @@ public:
 	void turnRegularOn( void );
 	void turnCutoffOn( void );
 	void playArrived( void );
+	void turnFrontOnlyOn( void );
+	void turnFrontOnlyOff( void );
 
 private:
 	typedef std::vector< ALuint > AluVect;
@@ -76,6 +78,8 @@ private:
 	// the 20 degree arc that's considered in the middle
 	static const float ARC_20 = 0.34906585;
 	static const float ANGLE_70 = 1.22173048;
+	static const float ANGLE_85 = 1.48352986;
+	static const float ARC_10 = 0.174532925;
 	static const float ARC_40 = 0.698131701;
 	static const float ARC_30 = 0.523598776;
 	float start_d;
@@ -95,6 +99,7 @@ private:
 	bool cutoff_;
 	bool playing_;
 	bool exit_;
+	bool front_only_;
 	pthread_mutex_t play_lock_;
 	pthread_mutex_t q_lock_;
 	pthread_cond_t empty_q_lock_;
@@ -126,7 +131,7 @@ private:
 	float calculatePitch( ALuint source );
 	float getAngle( float x, float z );
 	bool placeInRegion( float x, float z, ALfloat *pos );
-	void placeInCutoff( float x, float z, ALfloat *pos );
+	bool placeInCutoff( float x, float z, ALfloat *pos );
 
 };
 

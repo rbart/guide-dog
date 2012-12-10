@@ -25,9 +25,13 @@
 #include <vector>
 #include <ctime>
 #include <algorithm>
+#include <string>
+#include <sstream>
 
 using std::vector;
 using std::min;
+using std::stringstream;
+using std::string;
 
 //  function prototypes ---------------------------------------------
 void init();
@@ -41,10 +45,9 @@ float getAngle( ALfloat source[] );
 void alertTime();
 void displayDot ( void );
 void checkObstacles();
+void drawAngle();
 
-#define NUM_BUFFERS 3
-#define NUM_SOURCES 3
-#define NUM_ENVIRONMENTS 1
+// used to turn on and off the pink box and all related functions
 #define BOX
 
 ALfloat listenerPos[]={0.0,0.0,4.0};
@@ -63,15 +66,8 @@ float obs2_dist;
 ALfloat pink_box_pos[]={ 0.0, 0.0, -4.0};
 ALfloat pink_box_vel[]={ 0.0, 0.0, 0.0};
 
-ALuint buffer[NUM_BUFFERS];
-ALuint source[NUM_SOURCES];
-ALuint environment[NUM_ENVIRONMENTS];
 int GLwin;
 
-ALsizei size,freq;
-ALenum 	format;
-ALvoid 	*data;
-int 	ch;
 const GLdouble pi = 3.1415926535897932384626433832795;
 SonicDog *sonny;
 size_t pb;
@@ -83,6 +79,11 @@ const float WID = 0.5f;
 const float ANGLE_80 = 1.3962634;
 const float ARC_20 = 0.34906585;
 bool arrived = false;
+bool global_pause = false;
+ALfloat *target = pink_box_pos;
+ALfloat *targets[] = { pink_box_pos, obs2_pos, obs1_pos };
+unsigned int cur_targ = 0;
+bool draw_angle = false;
 
 // ===================================================================
 // void main(int argc, char** argv)
@@ -173,8 +174,32 @@ void display(void) {
 	// glutWireCube( 0.4 );
 	// glPopMatrix();
 
+	if ( draw_angle ) drawAngle();
+
 	glPopMatrix() ;
 	glutSwapBuffers() ;
+}
+
+void drawAngle() {
+  glColor3f(0.0,0.0,1.0) ;
+	glBegin(GL_LINES);
+	glVertex3f( listenerPos[0], listenerPos[1]-.25, listenerPos[2] );
+	glVertex3f( target[0], target[1]-.25, target[2] );
+	glEnd();
+
+	float degrees = ( getAngle( target ) * 180 ) / pi;
+	stringstream ss;
+	ss << degrees;
+
+	//glRotatef(10.0,0.0,0.0,0.0);
+	glPushMatrix();
+	glTranslatef( -3, 2, 0 );
+	glScalef(0.01f,0.01f,0.01f);
+	string text = ss.str();
+	for ( size_t i = 0; i < text.length(); i++ ) {
+		glutStrokeCharacter( GLUT_STROKE_ROMAN, text[i] );
+	}
+	glPopMatrix();
 }
 
 // ===================================================================
@@ -199,10 +224,12 @@ void keyboard(unsigned char key, int x, int y) {
 	switch(key) {
 		case '1': {
 			sonny->pauseObject( pb );
+			global_pause = true;
 			break;
 		}
 		case '2': {
 			sonny->unpauseObject( pb );
+			global_pause = false;
 			break;
 		}
 		case '3': {
@@ -217,8 +244,22 @@ void keyboard(unsigned char key, int x, int y) {
 			sonny->turnCutoffOn();
 			break;
 		}
-		case '6':
+		case '6': {
+			sonny->turnFrontOnlyOn();
 			break;
+		}
+		case '7': {
+			sonny->turnFrontOnlyOff();
+			break;
+		}
+		case '8': {
+			draw_angle = true;
+			break;
+		}
+		case '9': {
+			draw_angle = false;
+			break;
+		}
 		case 27: {
 			sonny->stop();
 			delete sonny;
@@ -227,6 +268,16 @@ void keyboard(unsigned char key, int x, int y) {
 
 			exit(0) ;
 			break ;
+		}
+		case ']': {
+			cur_targ++;
+			target = targets[cur_targ % 3];
+			break;
+		}
+		case '[': {
+			cur_targ--;
+			target = targets[cur_targ % 3];
+			break;
 		}
     default: break;
 	}
@@ -263,6 +314,16 @@ void specialKeys(int key, int x, int y) {
           break;
 				}
     }
+		float angle = getAngle( pink_box_pos );
+		float len = getDistance( pink_box_pos );
+		if ( angle > ANGLE_80 && angle < ( ANGLE_80 + ARC_20 ) && len < .7 && !arrived ) {
+			sonny->playArrived();
+			sonny->pauseObject( pb );
+			arrived = true;
+		} else if ( angle > ANGLE_80 && angle < ( ANGLE_80 + ARC_20 ) && len > .7 && !global_pause ) {
+			sonny->unpauseObject( pb );
+			arrived = false;
+		}
 
 #ifdef BOX
 		// location information about the pink box
@@ -301,13 +362,13 @@ void alertTime() {
 	if ( time( NULL ) - last_alert > alert_inter ) {
 		SonicDog::CoordinateVect obstacles;
 		angle = getAngle( obs1_pos );
-		if ( angle > angle61 && angle < angle119 && getDistance( obs1_pos ) < 1.5f ) {
+		if ( angle > angle61 && angle < angle119 && getDistance( obs1_pos ) < 2.5f ) {
 			dist = listenerPos[2] - obs1_pos[2];
 			side = obs1_pos[0] - listenerPos[0];
 			obstacles.push_back( SonicDog::Coordinate( side, dist ) );
 		}
 		angle = getAngle( obs2_pos );
-		if ( angle > angle61 && angle < angle119 && getDistance( obs2_pos ) < 1.5f ) {
+		if ( angle > angle61 && angle < angle119 && getDistance( obs2_pos ) < 2.5f ) {
 			dist = listenerPos[2] - obs2_pos[2];
 			side = obs2_pos[0] - listenerPos[0];
 			obstacles.push_back( SonicDog::Coordinate( side, dist ) );

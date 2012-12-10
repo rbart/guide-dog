@@ -47,8 +47,9 @@ SonicDog::SonicDog( size_t threads ) {
 	pthread_cond_init( &pause_cond_lock_, NULL );
 
 	// boolean to toggle regions on or off
-	regions_ = false;
-	cutoff_ = true;
+	regions_ = true;
+	cutoff_ = false;
+	front_only_ = false;
 }
 
 SonicDog::~SonicDog() {
@@ -460,14 +461,15 @@ void SonicDog::alertObstacles( const CoordinateVect &obstacles, bool diff ) {
 			checkError( "alutCreateBufferWaveform", ALUT );
 		}
 
+		bool front = true;
 		if ( regions_ ) {
 			// move the location of the source in the OpenAL world to one of our discrete zones
 			ALfloat pos[] = { 0.0, 0.0, 0.0 };
-			bool front = placeInRegion( src->x, src->z, pos );
-			if ( front ) alSourcefv( src->source, AL_POSITION, pos );
+			front = placeInRegion( src->x, src->z, pos );
+			alSourcefv( src->source, AL_POSITION, pos );
 		} else if ( cutoff_ ) {
 			ALfloat pos[] = { 0.0, 0.0, 0.0 };
-			placeInCutoff( src->x, src->z, pos );
+			front = placeInCutoff( src->x, src->z, pos );
 			alSourcefv( src->source, AL_POSITION, pos );
 		} else {
 			alSource3f( src->source, AL_POSITION, src->x, 0.0f, src->z );
@@ -478,7 +480,15 @@ void SonicDog::alertObstacles( const CoordinateVect &obstacles, bool diff ) {
 		alSourcei( src->source, AL_LOOPING, AL_FALSE );
 		alSourcei( src->source, AL_BUFFER, src->buffer );
 
-		play_q_.push( src );
+		if ( front ) {
+			play_q_.push( src );
+		} else if ( !front_only_ ) {
+			play_q_.push( src );
+		} else {
+			alDeleteSources( 1, &(src->source) );
+			alDeleteBuffers( 1, &(src->buffer) );
+			delete src;
+		}
 	}
 	pthread_mutex_unlock( &q_lock_ );
 	pthread_cond_broadcast( &empty_q_lock_ );
@@ -542,7 +552,7 @@ bool SonicDog::placeInRegion( float x, float z, ALfloat *pos ) {
 	}
 }
 
-void SonicDog::placeInCutoff( float x, float z, ALfloat *pos ) {
+bool SonicDog::placeInCutoff( float x, float z, ALfloat *pos ) {
 	float angle = getAngle( x, z );
 	float dist = sqrt( (x*x) + (z*z) );
 //	printf( "SD: x: %f\t z: %f\t angle: %f\n", x, z, angle );
@@ -552,15 +562,17 @@ void SonicDog::placeInCutoff( float x, float z, ALfloat *pos ) {
 	} else if ( angle > ( ANGLE_70 + ARC_40 ) ) {
 		// source is considered to the left of the listener
 		pos[0] = -dist;
-	} else if ( angle > ANGLE_80 && angle < ( ANGLE_80 + ARC_20 ) ) {
+	} else if ( angle > ANGLE_85 && angle < ( ANGLE_85 + ARC_10 ) ) {
 		// source is considered in front of the listener
 		pos[2] = dist;
-	} else if ( angle < ANGLE_80 || angle > ( ANGLE_80 + ARC_20 ) ) {
+		return true;
+	} else if ( angle < ANGLE_85 || angle > ( ANGLE_85 + ARC_10 ) ) {
 		// gradually move the source to one side
 		float map_angle = 2*angle - 140;
 		pos[0] = dist*cos( map_angle );
 		pos[2] = dist*sin( map_angle );
 	}
+	return false;
 }
 
 void SonicDog::turnRegionsOn( void ) {
@@ -626,4 +638,12 @@ void SonicDog::playArrived( void ) {
 	play_q_.push( src );
 	pthread_mutex_unlock( &q_lock_ );
 	pthread_cond_broadcast( &empty_q_lock_ );
+}
+
+void SonicDog::turnFrontOnlyOn( void ) {
+	front_only_ = true;	
+}
+
+void SonicDog::turnFrontOnlyOff( void ) {
+	front_only_ = false;	
 }
