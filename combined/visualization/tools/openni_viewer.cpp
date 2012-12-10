@@ -453,18 +453,27 @@ keyboard_callback (const pcl::visualization::KeyboardEvent& event, void* cookie)
   } else if (event.keyDown() && event.getKeyCode() == 'o') {
     cout << "flipping obstacles" << endl;
     showObstacles = !showObstacles;
-  } else if (event.keyDown() && event.getKeyCode() == '4') {
-		if ( beacon > -1 ) {
-			dog.pauseObject( beacon );
-		}
-	} else if ( event.keyDown() && event.getKeyCode() == '5' ) {
-		if ( beacon > -1 ) {
-			dog.unpauseObject( beacon );
-		}
-	} else if ( event.keyDown() && event.getKeyCode() == 27 ) {
-		exit( 0 );
-	}
-  else if (event.keyDown() && event.getKeyCode() == 'd' && beacon > -1) {
+  } else if (event.keyDown() && event.getKeyCode() == '1') {
+    if ( beacon > -1 ) {
+    	dog.pauseObject( beacon );
+    }
+  } else if ( event.keyDown() && event.getKeyCode() == '2' ) {
+    if ( beacon > -1 ) {
+    	dog.unpauseObject( beacon );
+    }
+  } else if ( event.keyDown() && event.getKeyCode() == 'z' ) {
+    dog.turnRegularOn();
+  } else if ( event.keyDown() && event.getKeyCode() == 'x' ) {
+    dog.turnRegionsOn();
+  } else if ( event.keyDown() && event.getKeyCode() == 'c' ) {
+    dog.turnCutoffOn();
+  } else if ( event.keyDown() && event.getKeyCode() == 'v' ) {
+    dog.turnFrontOnlyOn();
+  } else if ( event.keyDown() && event.getKeyCode() == 'b' ) {
+    dog.turnFrontOnlyOff();
+  } else if ( event.keyDown() && event.getKeyCode() == 27 ) {
+    exit( 0 );
+  } else if (event.keyDown() && event.getKeyCode() == 'd' && beacon > -1) {
     dog.removeObject(beacon);
     beacon = -1;
   }
