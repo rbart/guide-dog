@@ -3,3 +3,12 @@
 
 # ignore object files and archive files
 *.[oa]
+
+# Ignore tex files
+final-report/bib
+final-report/guide-dog.aux
+final-report/guide-dog.blg
+final-report/guide-dog.dvi
+final-report/guide-dog.log
+final-report/guide-dog.out
+final-report/guide-dog.pdf
