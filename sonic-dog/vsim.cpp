@@ -136,6 +136,8 @@ void display(void) {
   glPushMatrix() ;
 	glRotatef(15.0,1.0,0.0,0.0);
 
+	if ( draw_angle ) drawAngle();
+
 	// obstacle
 	glPushMatrix();
 	glTranslatef(obs1_pos[0],obs1_pos[1],obs1_pos[2]);
@@ -165,16 +167,6 @@ void display(void) {
   glColor3f(1.0,1.0,1.0) ;
 	glutWireCube(WID) ;
 	glPopMatrix() ;
-	
-	// cone
-	// glPushMatrix() ;
-	// glTranslatef(listenerPos[0],listenerPos[1],listenerPos[2]) ;
-  // glColor3f(1.0,1.0,1.0) ;
-	// //glutWireCone( 0.5543, 1.0, 50, 50 );
-	// glutWireCube( 0.4 );
-	// glPopMatrix();
-
-	if ( draw_angle ) drawAngle();
 
 	glPopMatrix() ;
 	glutSwapBuffers() ;
