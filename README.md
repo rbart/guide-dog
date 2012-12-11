@@ -23,4 +23,6 @@ Install and Run
 -   Execute `make openni_viewer`.
 -   Execute `bin/openni_viewer` to run Guide-Dog.
 
+Project Details
+---------------
 More details can be found at http://rbart.github.com/guide-dog/
