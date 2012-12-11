@@ -5,7 +5,7 @@ Install and Run
 ---------------
 -   Guide-Dog requires Ubuntu Linux version 12.04.1 LTS
 -   Open a Terminal and execute (these instructions taken from
-    http://pointclouds.org/downloads/linux.html):
+    http://pointclouds.org/downloads/linux.html ):
 
         sudo add-apt-repository ppa:v-launchpad-jochen-sprickerhof-de/pcl
         sudo apt-get update
