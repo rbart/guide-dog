@@ -52,18 +52,91 @@ instance, describe your tracking / smoothing / recognition algorithm.)
 \subsubsection{Overview}
 \label{sec:obs-overview}
 
-(Provide the context of what your system does. A drawing might be useful here.)
+The second component of Guide Dog is the component to detect obstacles. This
+component must detect the obstacles nearby to the user and convey the obstacles'
+locations to the audio interface. Only obstacles near the user are detected in
+order to prevent overwhelming the user. It is only important for the user to
+know if he she is about to run into an obstacle, not if there is obstacle on the
+other side of the room.
 
 \subsubsection{Operation}
 \label{sec:obs-op}
 
-(Detailed description of the different functionalities and how they work. For
-instance, describe your tracking / smoothing / recognition algorithm.)
+The obstacle detection algorithm looks only at the depth information from the
+RGB-D camera. From this, it can see objects such as the floor, obstacles and
+walls. Intuitvely, all of the obstacles will be above the floor, while the floor
+itself is not an obstacle. This leads to a simple algorithm to detect the
+obstacles: just remove the floor and everything left is an obstacle.
 
 \subsubsection{Implementation Details}
 \label{sec:pbs-impl}
 
-(Some details on the software implementation.)
+The obstacle detection algorithm views the points in a format created by the
+Point Cloud Library (PCL)\cite{pcl-website}. Each individual pixel viewed by
+the camera is represented by an X coordinate, Y coordinate, depth and RGB color.
+A data structure storing all of these points is called a ``point cloud'' and
+represents the whole 3D environment the camera can see.
+
+The obstacle detection algorithm first looks at the point cloud and extracts the
+plane of the floor. PCL has a built-in planar segmentation library function that
+detects the largest plane in view (there is an issue if the floor is not the
+larget plane in view. This will be discussed in Section~\ref{sec:discussion}).
+The plane detection algorithm gives the \emph{a}, \emph{b}, \emph{c}, and
+\emph{d} coefficients of the in the following planar equation:
+
+\begin{math}
+ax + by + cz + d = 0
+\end{math}
+
+This results in an equation representing the plane of the floor. The obstacle
+detection algorithm then removes all points that lie within a certain threshold
+of the floor plane. The threshold helps remove noise added by the camera and is
+currently set to 10 centimeters. After removing the floor, only the obstacles
+are left. However, the obstacles are represented in 3D space, which is not
+necessary for obstacle detection. This is because the height of an obstacle does
+not matter. If there is an obstacle at any height, this needs to be
+communicated to the user. This allows the obstacle detection algorithm to
+convert the 3D obstacles in 2D space. To do this, the 3D obstacle coordinates
+are projected onto the floor plane. Then, the floor plane is rotated so that it
+is level. This provides a simple way to analyze the obstacles and calculate
+distances.
+
+TODO: where to talk about previous obstacle detection?
+
+Once the obstacles have been extracted and projected into a 2D space more
+analysis is performed to detect their locations. The obstacles are transferred
+into a black and white image: a white pixel means there is part of an obstacle
+at that location, a black pixel means that location is empty. An example of this
+image is shown in Figure~\ref{fig:obstacle}. This image is then
+passed off to a blob detection algorithm in OpenCV\cite{opencv-website}. The
+blob detection algorithm groups together contiguous areas of points. This is
+helpful because it takes a bunch of individual white pixels that are all next to
+each other and groups them into one single ``blob'' with a single X and Y
+coordinate location. As is shown in the example image in
+Figure~\ref{fig:obstacle}, each obstacle is represented as a contiguous block
+of white pixels. The blob detection algorithm detects the contiguous block and
+produces a single point for the blob, marked with a red dot in the example
+figure.
+
+At this point, the obstacle detection algorithm has the locations of all
+obstacles. There are two more steps that must happened before the obstacles are
+sent off to the audio interface. First, the obstacle detection component has not
+yet had any communication with the destination detection component. That means
+that the obstacle detection component has no idea where the destinatio object is
+and that the destination component will get detected and marked as an obstacle!
+In order to prevent this, the obstacle detection component gets the coordinates
+of the destination object from the destination detection component. It then
+compares the coordinates of each obstacle it found with the coordinates of the
+destination object. If any of the obstavle coordinates are close enough to the
+destination, the obstacle detection component assumes that the obstacle must
+actually be the desination and removes it from its list of obstacles. Second,
+the obstacle detection component is only supposed to communicate obstacles that
+are near to the user, not all obstacles. To do this, the obstacle detection
+component simply removes any obstacles that are too far away from the user.
+
+At this point, the remaining obstacles are ready to be passed off to the audio
+interface so they can be communicated with the user.
+
 
 \subsection{Audio Interface}
 \label{sec:audio}
