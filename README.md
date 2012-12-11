@@ -15,6 +15,13 @@ Install and Run
         sudo apt-get update
         sudo apt-get install libpcl-all
 
+-   Download and extract a copy of the OpenCV source code from
+    http://opencv.willowgarage.com/wiki/
+-   Change directory into the 'OpenCV-2.4.2' directory.
+-   Exectue 'mkdir build'.
+-   Change directory to 'build'.
+-   Execute 'cmake ..'.
+-   After cmake has configured successfully, execute `sudo make install`.
 -   Download and extract a copy of the PCL source code from
     http://www.pointclouds.org/assets/files/1.6.0/PCL-1.6.0-Source.tar.bz2
 -   Download Guide-Dog to the same parent directory as the PCL source code by
@@ -23,6 +30,9 @@ Install and Run
     `PCL-1.6.0-Source` directory execute
     `cp -R guide-dog/sonic-dog/ PCL-1.6.0-Source/; cp -R guide-dog/combined/visualization/ PCL-1.6.0-Source/`
 -   Change directory to the `PCL-1.6.0-Source` directory.
--   Execute `cmake .`.
+-   Execute `mkdir build`.
+-   Change directory to `build`.
+-   Execute `cmake ..` and make sure that the visualization package will be built.
 -   Execute `make openni_viewer`.
--   Execute `bin/openni_viewer` to run Guide-Dog.
+-   Copy the .wav files under guide-dog/sonic-dog to 'build'.
+-   Execute `./bin/openni_viewer` to run Guide-Dog.
