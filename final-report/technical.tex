@@ -18,14 +18,20 @@ below.
 
 \begin{figure}
 \includeimage{destination.pdf}{8cm}{bb=0 0 474 474}
-\caption{TODO: caption}
+\caption{A similarity view showing regions of the scene with a high similarity
+to the color of the destination object}
 \label{fig:destination}
 \end{figure}
 
 \subsubsection{Overview}
 \label{sec:dest-overview}
 
-(Provide the context of what your system does. A drawing might be useful here.)
+Guide Dog's destination detection component is responsible for identifying the
+destination object in the scene, and determining it's position in space 
+relative to the camera. The component is only able to detect objects of a solid
+color that contrast highly from the scene. Functionality is provided for
+recalibrating the system for a new color, or for different lighting or
+exposure conditions. 
 
 \subsubsection{Operation}
 \label{sec:dest-op}
