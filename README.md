@@ -8,7 +8,7 @@ Project details can be found at http://rbart.github.com/guide-dog/
 Install and Run
 ---------------
 
-We have successfully run Guide-Dog on both Ubuntu and Fedora using the following Directions:
+We have successfully run Guide-Dog on both Ubuntu and Fedora using the following directions:
 
 -   Installing libraries for Guide-Dog on Ubuntu Linux version 12.04.1 LTS (recommended OS)
     -   Open a Terminal and execute (these instructions taken from
@@ -52,6 +52,6 @@ We have successfully run Guide-Dog on both Ubuntu and Fedora using the following
     -   Execute `cmake ..` and make sure that the visualization package will be built. You'll likely need to install other packages required by PCL.
     -   Execute `make openni_viewer`.
     -   Copy the .wav files under guide-dog/sonic-dog to 'build'.
-    -   Make sure your camera is plugged in to a USB port. We recommend the
-        [Asus Xtion PRO LIVE](http://www.asus.com/Multimedia/Motion_Sensor/Xtion_PRO_LIVE/).
+    -   Make sure your camera is plugged in to a USB  port. We recommend the
+        [Asus Xtion PRO LIVE](http://www.asus.com/Multimedia/Motion_Sensor/Xtion_PRO_LIVE/). If possible, use a USB 2.0 port.
     -   Execute `./bin/openni_viewer` to run Guide-Dog.
