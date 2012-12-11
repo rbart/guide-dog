@@ -52,4 +52,6 @@ We have successfully run Guide-Dog on both Ubuntu and Fedora using the following
     -   Execute `cmake ..` and make sure that the visualization package will be built. You'll likely need to install other packages required by PCL.
     -   Execute `make openni_viewer`.
     -   Copy the .wav files under guide-dog/sonic-dog to 'build'.
+    -   Make sure your camera is plugged in to a USB port. We recommend the
+        [Asus Xtion PRO LIVE](http://www.asus.com/Multimedia/Motion_Sensor/Xtion_PRO_LIVE/).
     -   Execute `./bin/openni_viewer` to run Guide-Dog.
