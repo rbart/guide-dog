@@ -1,6 +1,10 @@
 guide-dog
 =========
 
+Project Details
+---------------
+Project details can be found at http://rbart.github.com/guide-dog/
+
 Install and Run
 ---------------
 -   Guide-Dog requires Ubuntu Linux version 12.04.1 LTS
@@ -22,7 +26,3 @@ Install and Run
 -   Execute `cmake .`.
 -   Execute `make openni_viewer`.
 -   Execute `bin/openni_viewer` to run Guide-Dog.
-
-Project Details
----------------
-More details can be found at http://rbart.github.com/guide-dog/
