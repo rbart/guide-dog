@@ -18,9 +18,9 @@ Install and Run
 -   Download and extract a copy of the OpenCV source code from
     http://opencv.willowgarage.com/wiki/
 -   Change directory into the 'OpenCV-2.4.2' directory.
--   Exectue 'mkdir build'.
--   Change directory to 'build'.
--   Execute 'cmake ..'.
+-   Execute `mkdir build`
+-   Change directory to `build`.
+-   Execute `cmake ..`. You'll likely need to install other packages required by OpenCV.
 -   After cmake has configured successfully, execute `sudo make install`.
 -   Download and extract a copy of the PCL source code from
     http://www.pointclouds.org/assets/files/1.6.0/PCL-1.6.0-Source.tar.bz2
@@ -32,7 +32,7 @@ Install and Run
 -   Change directory to the `PCL-1.6.0-Source` directory.
 -   Execute `mkdir build`.
 -   Change directory to `build`.
--   Execute `cmake ..` and make sure that the visualization package will be built.
+-   Execute `cmake ..` and make sure that the visualization package will be built. You'll likely need to install other packages required by PCL.
 -   Execute `make openni_viewer`.
 -   Copy the .wav files under guide-dog/sonic-dog to 'build'.
 -   Execute `./bin/openni_viewer` to run Guide-Dog.
