@@ -19,7 +19,7 @@ sudo apt-get install libpcl-all
     `PCL-*-Source` execute
     `cp -R guide-dog/sonic-dog/ PCL-1.6.0-Source/; cp -R guide-dog/combined/visualization/ PCL-1.6.0-Source/`
 -   Change directory to the `PCL-*-Source` directory.
--   Execute `cmake`.
+-   Execute `cmake .`.
 -   Execute `make openni_viewer`.
 -   Execute `bin/openni_viewer` to run Guide-Dog.
 
