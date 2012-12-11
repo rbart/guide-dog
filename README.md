@@ -20,7 +20,7 @@ Install and Run
 -   Download Guide-Dog to the same parent directory as the PCL source code by
     running `git clone https://github.com/rbart/guide-dog.git`
 -   From the parent directory that contains the `guide-dog` directory and
-    `PCL-1.6.0-Source` execute
+    `PCL-1.6.0-Source` directory execute
     `cp -R guide-dog/sonic-dog/ PCL-1.6.0-Source/; cp -R guide-dog/combined/visualization/ PCL-1.6.0-Source/`
 -   Change directory to the `PCL-1.6.0-Source` directory.
 -   Execute `cmake .`.
