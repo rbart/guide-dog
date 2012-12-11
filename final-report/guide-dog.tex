@@ -33,6 +33,14 @@
 
 \conferenceinfo{CSE 481 O Final Report,}{Autumn 2012}
 
+\newcommand{\includeimage}[3]{
+\begin{center}
+%\ifhevea\imgsrc{#1.png}\else
+\resizebox{!}{#2}{\includegraphics[#3]{images/#1}}
+\vspace{-1.5\baselineskip}
+%\fi
+\end{center}}
+
 \title{Guide Dog: an audio guidance tool}
 
 %
