@@ -7,11 +7,9 @@ Install and Run
 -   Open a Terminal and execute (these instructions taken from
     (http://pointclouds.org/downloads/linux.html):
 
-        ```
         sudo add-apt-repository ppa:v-launchpad-jochen-sprickerhof-de/pcl
         sudo apt-get update
         sudo apt-get install libpcl-all
-        ```
 
 -   Download and extract a copy of the PCL source code from
     http://www.pointclouds.org/assets/files/1.6.0/PCL-1.6.0-Source.tar.bz2
