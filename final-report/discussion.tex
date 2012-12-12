@@ -28,3 +28,14 @@ times, enabling more sophisticated obstacle detection, and it would
 allow shortest paths to be computed through a 3D map, enabling audio
 guidance with more detailed cues for guiding the user along the path
 (e.g. synthetic speech).
+
+The open source support for RGB-D image processing was impressive. Many of the
+``hard'' parts of the project were already implemented. For example, PCL's
+planar segmentation worked perfectly to detect the ground plane for obstacle
+detection. OpenCV's blob detection was simple to set up and use and was taken
+advantage of in both destination and obstacle detection.
+
+In the future, in would be beneficial to have a fully integrated system
+completed earlier. With a fully integrated system it would be easier to test the
+audio interface in a real world environment, which would allow for better
+iteration and improvement of the audio system.
