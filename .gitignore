@@ -15,3 +15,6 @@ final-report/guide-dog.dvi
 final-report/guide-dog.log
 final-report/guide-dog.out
 final-report/guide-dog.pdf
+
+# Ignore vsim binary
+sonic-dog/vsim
