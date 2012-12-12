@@ -7,6 +7,28 @@ what worked, what didn't work and why.
 \subsection{Destination Detection}
 \label{sec:eval-dest}
 
+Although the authors originally intended to be able to detect a variety
+of complex objects as destination targets, it quickly became apparent that
+the difficulty of detecting an arbitrary object had been underestimated.
+As a placeholder for a more sophisticated object detector, we implemented
+a detector that could find and track an object so long as it stood out
+clearly from its environment. This lead to the limitation that
+destination objects work best when they are of a solid color. We found
+that bright magenta tended to stand out best from typical interior
+environments. 
+
+Even with the above limitation, the authors found that the orientation
+of the destination object, diffuse reflection, and differences in lighting
+(even between two places in the same room) were factors that could lead
+to a failure to detect the destination object. To mitigate these issues,
+the authors experimented with various similarity metrics such as cosine
+similarity, added blob detection for the similarity image, and used a
+destination object with a round surface (e.g. a coffee can) to reduce
+dependence on the orientation of the object. With these improvements,
+the system was able to reliably detect the destination under normal
+indoor lighting conditions. 
+
+
 
 \subsection{Obstacle Detection}
 \label{sec:eval-obs}
