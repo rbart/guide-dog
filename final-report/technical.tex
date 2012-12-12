@@ -29,22 +29,28 @@ to the color of the destination object}
 
 Guide Dog's destination detection component is responsible for identifying the
 destination object in the scene, and determining it's position in space 
-relative to the camera. The component is only able to detect objects of a solid
-color that contrast highly from the scene. Functionality is provided for
-re-calibrating the system for a new color, or for different lighting or
-exposure conditions. 
+relative to the camera. Guide Dog was originally imagined as a system that
+would be able to detect a wide variety of objects, but we were forced to
+build a simpler prototype due to time constraints. As a result, the component 
+is only able to detect objects of a solid color that contrast highly from the 
+scene. Functionality is provided for re-calibrating the system for a new color, 
+or for different lighting or exposure conditions. 
 
 \subsubsection{Operation}
 \label{sec:technical-dest-op}
 
 The destination detection works by first measuring the color of the destination
-object. Once the color of the destination object is known, we compute a
-similarity image where each pixel represents the similarity of an input
-pixel's color to the measured destination color. Once this image is obtained,
-we binarize the pixel values by applying an adjustable threshold. The result
-is a binary image like \ref{fig:destination}. A \emph{blob detection}
-algorithm is then run over the binary image, and the pixel location of the
-largest blob is returned as the pixel location of the destination object.
+object. This measurement can be performed on the fly, by placing the
+destination object in front of the camera, and then measuring the average 
+color within a center region of the image. Once the color of the destination 
+object is known, we compute a similarity image where each pixel represents the 
+similarity of an input pixel's color to the measured destination color. Once 
+this image is obtained, we binarize the pixel values by applying a 
+user-adjustable threshold. The result is a binary image like 
+\ref{fig:destination}. A \emph{blob detection} algorithm is then run over the 
+binary image, which finds the largest connected components within the binary 
+image by treating it as a 6-connected graph. The pixel location of the largest 
+blob is returned as the pixel location of the destination object.
 
 In order to determine the camera-relative position of the destination object,
 we use an average of the pixels near the destination object to compute
@@ -61,6 +67,13 @@ magnitude of their difference vector, e.g., if \emph{c} is the color of a
 given pixel, and \emph{d} is the color of the destination, then the difference
 \begin{math} diff = c - d \end{math} and the similarity \begin{math} 
 sim = 1 - ||diff|| \end{math}. 
+
+In order to make the system more robust to noise, we apply a Gaussian blur
+filter to the similarity image with a relatively large kernel size, e.g.
+10 to 15 pixels in our application. Since the similarity computation tends
+to amplify the appearance of noise, and also because noise tends to
+negatively effect blob detection, this added step helps significantly increase
+the robustness of the component.
 
 After computing a similarity image in this fashion, we binarize the image
 using a simple user-set threshold, and pass the binary image to the OpenCV(cite)
