@@ -205,14 +205,6 @@ destination or obstacle.
 
 %(Detailed description of the different functionalities and how they work. For
 %instance, describe your tracking / smoothing / recognition algorithm.)
-Guide Dog's audio interface was initially imagined to be one that used voice 
-commands like in a GPS navigation system. However, such a system would require
-mapping and path finding within the scene, which would have been too complex
-given the time constraints. Furthermore, people are very capable with finding
-their own paths given a few hints about where they need to be going and what
-may be in their way. Thus, Guide Dog adopted a system that gives audio hints to
-the user instead.
-
 The audio system signals the location of the destination through the use of an
 audio beacon that sounds like a series of synthesized echoing beeps. It is fairly
 easy to distinguish changes in tone using the beeps and it is not a sound that
@@ -235,48 +227,18 @@ too many, which would overwhelm and confuse the user, or the ones that are
 particularly far would cause the user to correct his route at times when the 
 path in front of him is actually clear.
 
-The first version of the audio system played audio cues as though they were
-actually emanating from an object's real 3D position using stereo sound. However,
-users could only get a fuzzy indication of where an object was located with 
-respect to it being to the left or right of the user. Thus, to further clarify 
-the direction of an object, the audio system continues to use stereo sound, but
-divides the field of view of the camera into discrete regions that over-emphasize 
-the front, left, and right directions. 
-
-There were two designs implemented for the regions. The angle for each region
-can been seen in figure \ref{fig:regions}. The first used three regions
-representing left, front, and right. Since the Asus Xtion camera has a 58 degree
-field of vision on the horizontal, the audio system assigns any object that
-falls within the middle 20 degrees of the view as considered being in front. The
-user will hear the audio cues with equal weight in both his or her ears. Any
-objects that are located outside those middle 20 degrees are considered to the
-immediate left or right. Thus, if an object is to the right of the middle region,
-the user only hears sound in the right ear and vice versa for objects in the
-left region. When finding the destination, the user can position the destination
-in front and walk forward. If the user happens to not be perpendicular to the
-object in real life, the destination will eventually fall to the left or right
-as the user gets closer, which then forces the user to reposition. However, this
-strategy appeared limited since it only communicates three directions. Thus, the
-second strategy tried improve upon this.
-
-In the second iteration on regions, the audio system divided the field of view
-into five regions in an attempt to get finer directional sound. This time, the
-middle 10 degrees was devoted to the front. The 15 degree arc to each side of 
-the middle indicates a gradual left or right and the final 9 degrees represent
-a hard left or right. The front and hard left or right regions function in the 
-same manner as the first design, but the 15 degree arcs are devoted to a gradual
-representation of left or right. This means that as the location of an object
-sweeps through gradual right region, the weight of the sound playing in the
-right ear is slowly increased while the left ear is slowed decreased. This 
-strategy gives the user a better sense of how far to the right or left an object
-is located compared to the first design. Both designs are functional and users
-have the ability within Guide Dog to toggle between them.
-
-\begin{figure}
-\includeimage{regions.pdf}{6cm}{bb=0 0 600 450}
-\caption{TODO: caption}
-\label{fig:regions}
-\end{figure}
+The audio system defines five discrete regions that an object may be located
+within. These regions help the system exagerate the left and right directions 
+when sounds are played back to the user when compared against playing the
+sound purely as though it were emanating that its actual location in 3D space.
+This strategy gives a clear indication which direction an object is located in.
+These regions are based on the angle of the object's location relative to the
+user. An object in front of the user is between 85 and 95 degrees. The 15 degree
+arcs to both sides of the middle region are gradual left and left. For angles
+greater than 110, the object is considered to the imediate left and angles less
+than 70 degrees place an object to the imediate right. Section 
+\ref{sec:eval-audio} describes the development of the region design in greater
+detail.
 
 \subsubsection{Implementation Details}
 \label{sec:technical-audio-impl}
@@ -327,10 +289,11 @@ The math used to place an object in a specific region is straightfoward. Given
 the \emph{x} and \emph{z} of an object, SonicDog uses arctangent to calculate
 the angle \begin{math}\theta\end{math} between the object and the listener and 
 the Pythagorean theorem to calculate the distance \emph{d} from the object to 
-the listener. If using the five-region design, then the middle is the arc 
-between 85 and 95 degrees. When \begin{math}85\leq\theta\leq95\end{math}, 
-SonicDog sets the internal coordinates to \emph{(0, 0, d)} so that OpenAL plays 
-a sound that appears as though it is coming from in front of the user. If 
+the listener. In the five-region design, the middle is the arc considered in
+front of the user is between 85 and 95 degrees. When 
+\begin{math}85\leq\theta\leq95\end{math}, SonicDog sets the internal 
+coordinates to \emph{(0, 0, d)} so that OpenAL plays a sound that appears as 
+though it is coming from in front of the user. If 
 \begin{math}110\leq\theta\end{math}, SonicDog places the source at 
 \emph{(-d, 0, 0)} because that region is considered the hard left. For the 15 
 degree arcs representing the gradual left or right regions, SonicDog uses the 
@@ -339,7 +302,7 @@ equation \begin{math}\phi=2\theta-140\end{math} to place the source at angle
 located at 0 to 35 degrees to either side of the listener. The internal 
 coordinates are then set as \begin{math}(d\cos\phi, 0, d\sin\phi)\end{math}. 
 This means that there is an emphasis in the sound being played toward one side, 
-but not completely in one ear.
+but not completely in one ear.  
 
 Since this is a multi-threaded system, there are multiple locks used to 
 synchronize access to the maps inside SonicDog that keep track of what objects
