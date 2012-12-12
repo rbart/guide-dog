@@ -1,4 +1,4 @@
-\section{Evaluation and Results (\textasciitilde 2 pages)}
+\section{Evaluation and Results}
 \label{sec:eval}
 
 This section details the authors' experiences building the Guide Dog system:
@@ -11,8 +11,8 @@ Although the authors originally intended to be able to detect a variety
 of complex objects as destination targets, it quickly became apparent that
 the difficulty of detecting an arbitrary object had been underestimated.
 As a place holder for a more sophisticated object detector, we implemented
-a detector that could find and track an object so long as it stood out
-clearly from its environment. This lead to the limitation that
+a detector that could find and track an object as long as it stood out
+clearly from its environment. This led to the limitation that
 destination objects work best when they are of a solid color. We found
 that bright magenta tended to stand out best from typical interior
 environments. 
@@ -29,7 +29,6 @@ the system was able to reliably detect the destination under normal
 indoor lighting conditions. 
 
 
-
 \subsection{Obstacle Detection}
 \label{sec:eval-obs}
 
@@ -41,8 +40,8 @@ Section~\ref{sec:technical-obs-impl}). The authors first attempted a series of
 matrix rotations and translations, but had little luck getting this to work.
 Instead, the authors discovered a projection library function in PCL. This takes
 a plane and projects all the points in the environment onto this plane. The
-environment if first projected onto the ground plane, which flattens all of the
-obstacles into 2D, on the ground plane. Then, this result is projected on to the
+environment is first projected onto the ground plane, which flattens all of the
+obstacles into 2D on the ground plane. Then, this result is projected on to the
 X-Z axis. This way the Y component is removed, resulting in a 2D image.
 
 Another aspect of the obstacle detection component the authors experimented with
@@ -50,15 +49,14 @@ was actually identifying the locations of the obstacles. The first approach
 simply split the environment into a left and right half. The obstacle detection
 component would then identify the closest point on the left side and the
 closest point on the right side as obstacles. This was a simplistic approach,
-but didn't work well for a few reasons. First, it did not pay attention to the
-size of the obstacles. For example, the image contains small amounts of noise
-that appear as small obstacles. However, the obstacle detection component should
-not include these as obstacles. Second, it did not group contiguous points into
+but didn't work well for a few reasons. First, it incorrectly identified noise in
+the image as obstacles. For example, the images sometimes contain small amounts of noise
+that appear as small obstacles. Second, it did not group contiguous points into
 a single obstacle. This is not a problem if the obstacles are both restricted to
 only one side of the environment. However, it was often the case that an
-obstacle would be right in the center. So when the obstacle detection component
+obstacle would be directly in the center. So when the obstacle detection component
 searched for the two closest points on the left and right it would settle upon
-two points that were actually on the same obstacle.
+two points that were actually part of the same obstacle.
 
 To address these problems, the authors switched to using the blob detection
 approach described in Section~\ref{sec:technical-obs-impl}. The blob detection
@@ -68,7 +66,7 @@ small areas of noise that weren't actually obstacles. Further, since the blob
 detection clumps together contiguous areas there is no concern of erroneously
 identifying a single physical obstacle as multiple obstacles.
 
-One current issue the obstacle detection component has it when it fails to
+One current issue the obstacle detection component has is when it fails to
 detect the ground plane. The planar segmentation algorithm the obstacle
 detection component uses doesn't actually detect the ground, it detects the
 largest plane in view. Often times, this will be the ground. However, if the
@@ -101,32 +99,32 @@ user.
 Guide Dog's audio interface was initially imagined to be one that used voice
 commands like in a GPS navigation system. However, such a system would require
 mapping and path finding within the scene, which would have been too complex
-given the time constraints. Furthermore, people are very capable with finding
+given the time constraints. Furthermore, people are very capable of finding
 their own paths given a few hints about where they need to be going and what
 may be in their way. Thus, Guide Dog adopted a system that gives audio hints to
 the user instead.
 
 The first version of the audio system played audio cues as though they were
 actually emanating from an object's real 3D position using stereo sound. However,
-users could only get a fuzzy indication of where an object was located with
-respect to it being to the left or right of the user. Thus, to further clarify
+users could only get an approximate indication of where an object was located
+because ears are not sensitive enough to pick up fine changes in audio direction. Thus, to further clarify
 the direction of an object, the audio system continues to use stereo sound, but
 divides the field of view of the camera into discrete regions that over-emphasize
 the front, left, and right directions.
 
-There were two designs implemented for the regions. The angle for each region
+There were two designs implemented for the regions. The angles for each region
 can been seen in Figure~\ref{fig:regions}. The first used three regions
 representing left, front, and right. Since the Asus Xtion camera has a 58 degree
-field of vision on the horizontal, the audio system assigns any object that
-falls within the middle 20 degrees of the view as considered being in front. The
+horizontal field of vision, the audio system considers any object that
+falls within the middle 20 degrees of the view to be in front. The
 user will hear the audio cues with equal weight in both his or her ears. Any
-objects that are located outside those middle 20 degrees are considered to the
+objects that are located outside those middle 20 degrees are considered to be to the
 immediate left or right. Thus, if an object is to the right of the middle region,
 the user only hears sound in the right ear and vice versa for objects in the
 left region. When finding the destination, the user can position the destination
-in front and walk forward. If the user happens to not be perpendicular to the
+in front and walk forward. If the user is actually not moving directly to the
 object in real life, the destination will eventually fall to the left or right
-as the user gets closer, which then forces the user to reposition. However, this
+as the user gets closer, which then forces the user to rotate. However, this
 strategy appeared limited since it only communicates three directions. Thus, the
 second strategy tried improve upon this.
 
@@ -137,10 +135,10 @@ the middle indicates a gradual left or right and the final 9 degrees represent
 a hard left or right. The front and hard left or right regions function in the
 same manner as the first design, but the 15 degree arcs are devoted to a gradual
 representation of left or right. This means that as the location of an object
-sweeps through gradual right region, the weight of the sound playing in the
-right ear is slowly increased while the left ear is slowed decreased. This
+sweeps to the right through gradual right region, the weight of the sound playing in the
+right ear is slowly increased while the left ear is slowed decreased. Compared to the first design, this
 strategy gives the user a better sense of how far to the right or left an object
-is located compared to the first design. Both designs are functional and users
+is located. Both designs are functional and users
 have the ability within Guide Dog to toggle between them.
 
 \begin{figure}

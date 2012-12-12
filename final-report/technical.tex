@@ -1,4 +1,4 @@
-\section{Technical Details (\textasciitilde 2-3 pages)}
+\section{Technical Details}
 \label{sec:technical}
 
 Guide Dog is composed of the three separate components described below: destination detection
@@ -9,7 +9,7 @@ interface (see Section~\ref{sec:technical-audio}).
 \begin{figure}
 \includeimage{color.pdf}{8cm}{bb=0 0 474 474}
 \caption{A sample scene, viewed in color. The destination object is the pink box
-  in the middle. The two stacks of brown boxes are the left and right are
+  in the middle. The two stacks of brown boxes on the left and right are
   obstacles.}
 \label{fig:color}
 \end{figure}
@@ -28,7 +28,7 @@ to the color of the destination object. The green dot indicates the predicted lo
 \label{sec:technical-dest-overview}
 
 Guide Dog's destination detection component is responsible for identifying the
-destination object in the scene, and determining it's position in space 
+destination object in the scene, and determining its position in space
 relative to the camera. Guide Dog was originally imagined as a system that
 would be able to detect a wide variety of objects, but we were forced to
 build a simpler prototype due to time constraints. As a result, the component 
@@ -42,7 +42,7 @@ or for different lighting or exposure conditions.
 The destination detection works by first measuring the color of the destination
 object. This measurement can be performed on the fly, by placing the
 destination object in front of the camera, and then measuring the average 
-color within a center region of the image. Once the color of the destination 
+color within the center region of the image. Once the color of the destination
 object is known, we compute a similarity image where each pixel represents the 
 similarity of an input pixel's color to the measured destination color. Once 
 this image is obtained, we binarize the pixel values by applying a 
@@ -62,9 +62,9 @@ position of the destination object.
 
 The similarity metric we use treats all pixels as vectors in 3-space. In order
 to compute a final similarity value, we first normalize all pixel vectors
-to unit length. We then represent the difference between two pixels by the
-magnitude of their difference vector, e.g., if \emph{c} is the color of a
-given pixel, and \emph{d} is the color of the destination, then the difference
+to unit length. We then represent the difference between two pixels using the
+magnitude of their difference vector. For example, if \emph{c} is the color of a
+given pixel, and \emph{d} is the color of the destination, then this gives the difference
 \begin{math} \textit{diff} = c - d \end{math} and the similarity \begin{math}
 \textit{sim} = 1 - ||\textit{diff}|| \end{math}.
 
@@ -78,7 +78,7 @@ the robustness of the component.
 After computing a similarity image in this fashion, we binarize the image
 using a simple user-set threshold, and pass the binary image to the OpenCV~\cite{opencv-website}
 \emph{SimpleBlobDetector}. This routine reliably detects connected components
-within the image, but requires many parameters to be set properly, e.g.
+within the image, but requires many parameters to be set properly, such as
 min/max blob size, convexity, and separation. After detecting blobs, the 
 largest blob is used to compute a centroid in 3-space using pixels belonging 
 to the blob.
@@ -100,8 +100,8 @@ to the blob.
 The second component of Guide Dog is the component to detect obstacles. This
 component must detect the obstacles nearby to the user and convey the obstacles'
 locations to the audio interface. Only obstacles near the user are detected in
-order to prevent overwhelming the user. It is only important for the user to
-know if he she is about to run into an obstacle, not if there is obstacle on the
+order to avoid overwhelming the user. It is only important for the user to
+know if he or she is about to run into an obstacle, not if there is obstacle on the
 other side of the room.
 
 \subsubsection{Operation}
@@ -125,9 +125,9 @@ represents the whole 3D environment the camera can see.
 The obstacle detection algorithm first looks at the point cloud and extracts the
 plane of the floor. PCL has a built-in planar segmentation library function that
 detects the largest plane in view (there is an issue if the floor is not the
-largest plane in view. This will be discussed in Section~\ref{sec:eval-obs}).
+largest plane in view, see Section~\ref{sec:eval-obs}).
 The plane detection algorithm gives the \emph{a}, \emph{b}, \emph{c}, and
-\emph{d} coefficients of the in the following planar equation:
+\emph{d} coefficients in the following planar equation:
 
 \begin{math}
 ax + by + cz + d = 0
@@ -141,32 +141,29 @@ are left. However, the obstacles are represented in 3D space, which is not
 necessary for obstacle detection. This is because the height of an obstacle does
 not matter. If there is an obstacle at any height, this needs to be
 communicated to the user. This allows the obstacle detection algorithm to
-convert the 3D obstacles in 2D space. To do this, the 3D obstacle coordinates
+convert the 3D obstacles to 2D space. To do this, the 3D obstacle coordinates
 are projected onto the floor plane. Then, the floor plane is rotated so that it
 is level. This provides a simple way to analyze the obstacles and calculate
 distances.
 
 Once the obstacles have been extracted and projected into a 2D space more
-analysis is performed to detect their locations. The obstacles are transferred
+analysis is performed to detect their locations. The obstacles are processed
 into a black and white image: a white pixel means there is part of an obstacle
 at that location, a black pixel means that location is empty. An example of this
 image is shown in Figure~\ref{fig:obstacle}. This image is then
-passed off to a blob detection algorithm in OpenCV~\cite{opencv-website}. The
-blob detection algorithm groups together contiguous areas of points. This is
-helpful because it takes a bunch of individual white pixels that are all next to
-each other and groups them into one single ``blob'' with a single X and Y
-coordinate location. As is shown in the example image in
+passed off to the same blob detection algorithm described in Section~\ref{sec:technical-dest-impl}.
+As is shown in the example image in
 Figure~\ref{fig:obstacle}, each obstacle is represented as a contiguous block
-of white pixels. The blob detection algorithm detects the contiguous block and
-produces a single point for the blob, marked with a red dot in the example
+of white pixels. The blob detection algorithm detects the contiguous blocks and
+produces a single point for each blob, marked with a red dot in the example
 figure.
 
 At this point, the obstacle detection algorithm has the locations of all
-obstacles. There are two more steps that must happened before the obstacles are
-sent off to the audio interface. First, the obstacle detection component has not
-yet had any communication with the destination detection component. That means
-that the obstacle detection component has no idea where the destination object is
-and that the destination component will get detected and marked as an obstacle!
+obstacles. There are two more steps that must happen before the obstacles are
+sent to the audio interface. First, the obstacle detection component must
+communicate with the destination detection component. This is because
+the obstacle detection component has no idea where the destination object is,
+meaning the destination component will get detected and marked as an obstacle!
 In order to prevent this, the obstacle detection component gets the coordinates
 of the destination object from the destination detection component. It then
 compares the coordinates of each obstacle it found with the coordinates of the
@@ -196,7 +193,7 @@ interface so they can be communicated to the user.
 Because the intended user of Guide Dog may not have normal vision, the audio 
 component is meant to provide guidance to the user without the need of sight. It
 uses 3D audio cues to direct the user toward the destination and warn of any 
-obstacles in the user's way. This means that the audio cues appears as though
+obstacles in the user's way. This means that the audio cues appear as though
 they emanate from a particular point in 3D space that corresponds to the
 destination or obstacle.
 
@@ -219,8 +216,8 @@ As for obstacles, the audio system uses a ding that sounds similar
 to the one that is played when a car door is left ajar. Like with the beacon, 
 the goal was to find a sound that was pleasant over moderate periods of time. 
 Furthermore, the ding is clearly distinguishable from the beacon. Unlike the
-destination beacon, the user is expected to pick the direction of the alert and
-avoid it. Only obstacles that are within about five feet of the user get alerted.
+destination beacon, the user is expected to
+avoid the direction of the alert. Only obstacles that are within about five feet of the user get alerted.
 This strategy allows the user enough room to correct his or her course while 
 still be helpful. If the system alerted obstacles at any distance, there may be 
 too many, which would overwhelm and confuse the user, or the ones that are 
@@ -228,9 +225,10 @@ particularly far would cause the user to correct his route at times when the
 path in front of him is actually clear.
 
 The audio system defines five discrete regions that an object may be located
-within. These regions help the system exaggerate the left and right directions
-when sounds are played back to the user when compared against playing the
-sound purely as though it were emanating that its actual location in 3D space.
+within. Compared to playing the
+sound purely as though it were emanating from its actual location in 3D space,
+these regions help the system exaggerate the left and right directions
+when sounds are played back to the user.
 This strategy gives a clear indication which direction an object is located in.
 These regions are based on the angle of the object's location relative to the
 user. An object in front of the user is between 85 and 95 degrees. The 15 degree
@@ -252,8 +250,8 @@ sound.
 
 SonicDog provides a thread pool and job queue for the threads. The destination
 and obstacle systems fill the queue with sound sources and the threads pop them
-off and become responsible for playing each source. OpenAL uses the concept of a
-listener to define the coordinates of the person listening and sources to define
+off and play a sound for each source. OpenAL uses the concepts of a
+listener, to define the coordinates of the person listening, and sources, to define
 the objects playing a sound. The listener and sources both have locations within
 the OpenAL world. SonicDog defines the listener at \emph{(0, 0, 0)} under the
 \emph{(x, y, z)} coordinate system. All other sound sources are placed relative 
@@ -261,12 +259,12 @@ to the listener by defining the \emph{x} and \emph{z} coordinates of the source
 since the other systems in Guide Dog reduce the world to a 2D plane. Positive
 \emph{x} denotes an object being to the right of the listener and negative 
 \emph{x} as being to the left. Similarly, positive \emph{z} is in front and
-negative \emph{z} is behind. Furthermore, sources have a sound buffer, which 
-defines the sound to be played associated with them.
+negative \emph{z} is behind. Furthermore, each source has a sound buffer, which
+defines the sound to be played for the source.
 
 To signal destinations, the destination system registers the object with
 SonicDog, which initializes the source and returns an identification number. 
-The destination system them refers to this number when it wants to update the 
+The destination system then refers to this number when it wants to update the
 new location of the registered object. Each time Guide Dog updates the location,
 there is a subroutine in SonicDog that calculates the angle of the object 
 relative to the user and then manipulates the internal OpenAL coordinates to 
@@ -286,15 +284,15 @@ source and goes back to pull more sources off the job queue or blocks if the
 queue is empty.
 
 The math used to place an object in a specific region is straightforward. Given
-the \emph{x} and \emph{z} of an object, SonicDog uses arctangent to calculate
+the \emph{x} and \emph{z} coordinates of an object, SonicDog uses arctangent to calculate
 the angle \begin{math}\theta\end{math} between the object and the listener and 
 the Pythagorean theorem to calculate the distance \emph{d} from the object to 
 the listener. In the five-region design, the middle is the arc considered in
-front of the user is between 85 and 95 degrees. When
+front of the user and is between 85 and 95 degrees. When
 \begin{math}85\leq\theta\leq95\end{math}, SonicDog sets the internal
 coordinates to \emph{(0, 0, d)} so that OpenAL plays a sound that appears as
 though it is coming from in front of the user. If
-\begin{math}110\leq\theta\end{math}, SonicDog places the source at 
+\begin{math}\theta>110\end{math}, SonicDog places the source at
 \emph{(-d, 0, 0)} because that region is considered the hard left. For the 15 
 degree arcs representing the gradual left or right regions, SonicDog uses the 
 equation \begin{math}\phi=2\theta-140\end{math} to place the source at angle 
@@ -307,8 +305,6 @@ but not completely in one ear.
 Since this is a multi-threaded system, there are multiple locks used to 
 synchronize access to the maps inside SonicDog that keep track of what objects
 have been registered to it. In addition, condition variables are used to
-synchronize the job queue since they allow for a thread to be blocked and not
+synchronize the job queue. These allow for a thread to be blocked and not
 use system resources when the queue is empty and for broadcasts to wake up
-threads when the queue become non-empty.
-
-
+threads when the queue becomes non-empty.

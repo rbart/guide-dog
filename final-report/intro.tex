@@ -6,7 +6,7 @@ become popular because of their use in video game consoles. These cameras are
 unique because not only to do they record color information, but they also record
 depth information. This allows the gaming system to do a much better job in
 figuring out what is happening in an environment. For example, it is much easier
-to detect a person with and RGB-D camera than a color camera. With just a color
+to detect a person with an RGB-D camera than a color camera. With just a color
 camera, complex and expensive computer vision techniques are required to detect
 a person. However, this is simplified with an RGB-D camera because the person
 will stand out from the background in the depth image.
@@ -24,14 +24,14 @@ Guide Dog explores a new application of RGB-D camera technology. Instead of
 being used in a game, Guide Dog is a system that uses audio cues to direct a
 user to a destination, while helping the user avoid obstacles. Guide Dog is a
 unique application for an RGB-D camera since it is mounted on the user, rather
-than facing the user, like general RGB-D camera applications. Guide Dog sees the
+than facing the user like general RGB-D camera applications. Guide Dog sees the
 environment from the perspective of the user and is able to detect both the
-destinations and any obstacles. Guide Dog communicates these locations to the
+destination and any obstacles. Guide Dog communicates these locations to the
 user by using two different audio tones: one for the destination and one for the
 obstacles. The destination tone varies in pitch and direction. The pitch of the
 tone indicates the distance from the destination and the direction indicates the
 direction to the destination. The obstacle tone only starts when an obstacle is
-within a few feet of the user, as only the close obstacles matter and too many
+within a few feet of the user, as only the close obstacles matter and alerts for too many
 obstacles would overwhelm the user. The obstacle tone also uses direction to
 indicate the direction of the obstacles.
 
@@ -39,11 +39,11 @@ This paper describes in detail the Guide Dog system as well as the authors'
 experiences designing, building and improving Guide Dog. This paper describes
 the various different approaches the authors experimented with when building
 Guide Dog. It gives details about what worked, what didn't work, and why. It
-gives details of how the individual components work and how they fit together
+also gives details of how the individual components work and how they fit together
 to form the Guide Dog system.
 
 The paper is organized as follows. Section~\ref{sec:related} describes related
-word. Section~\ref{sec:technical} describes the technical details of Guide Dog.
+work. Section~\ref{sec:technical} describes the technical details of Guide Dog.
 Section~\ref{sec:eval} evaluates the performance and success of Guide Dog.
 Section~\ref{sec:discussion} discusses Guide Dog and
 Section~\ref{sec:conclusion} concludes.
