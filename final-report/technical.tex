@@ -19,8 +19,8 @@ interface (see Section~\ref{sec:technical-audio}).
 
 \begin{figure}
 \includeimage{destination.pdf}{8cm}{bb=0 0 474 474}
-\caption{A similarity view showing regions of the scene with a high similarity
-to the color of the destination object}
+\caption{A similarity view of Figure~\ref{fig:color} showing regions of the scene with a high similarity
+to the color of the destination object. The green dot indicates the predicted location of the destination.}
 \label{fig:destination}
 \end{figure}
 
@@ -46,8 +46,8 @@ color within a center region of the image. Once the color of the destination
 object is known, we compute a similarity image where each pixel represents the 
 similarity of an input pixel's color to the measured destination color. Once 
 this image is obtained, we binarize the pixel values by applying a 
-user-adjustable threshold. The result is a binary image like 
-\ref{fig:destination}. A \emph{blob detection} algorithm is then run over the 
+user-adjustable threshold. The result is a binary image like
+Figure~\ref{fig:destination}. A \emph{blob detection} algorithm is then run over the 
 binary image, which finds the largest connected components within the binary 
 image by treating it as a 6-connected graph. The pixel location of the largest 
 blob is returned as the pixel location of the destination object.
