@@ -16,7 +16,13 @@ MAKE ?= make
 #  latex-process-inputs --makefilelist thesis.tex
 #  latex-process-inputs --makefilelist 2012-ftfjp.tex
 TEX_FILES = \
-guide-dog.tex
+guide-dog.tex \
+conclusion.tex \
+discussion.tex \
+eval.tex \
+intro.tex \
+related.tex \
+technical.tex
 
 
 NAME	:= guide-dog

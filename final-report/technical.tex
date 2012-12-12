@@ -1,9 +1,10 @@
 \section{Technical Details (\textasciitilde 2-3 pages)}
 \label{sec:technical}
 
-Guide Dog is composed of three separate components: destination detection,
-obstacle detection and the audio interface. These components are described
-below.
+Guide Dog is composed of the three separate components described below: destination detection
+(see Section~\ref{sec:technical-dest}),
+obstacle detection (see Section~\ref{sec:technical-obs}), and the audio
+interface (see Section~\ref{sec:technical-audio}).
 
 \begin{figure}
 \includeimage{color.pdf}{8cm}{bb=0 0 474 474}
@@ -14,38 +15,76 @@ below.
 \end{figure}
 
 \subsection{Destination Detection}
-\label{sec:dest}
+\label{sec:technical-dest}
 
 \begin{figure}
 \includeimage{destination.pdf}{8cm}{bb=0 0 474 474}
-\caption{A similarity view showing regions of the scene with a high similarity
-to the color of the destination object}
+\caption{A similarity view of Figure~\ref{fig:color} showing regions of the scene with a high similarity
+to the color of the destination object. The green dot indicates the predicted location of the destination.}
 \label{fig:destination}
 \end{figure}
 
 \subsubsection{Overview}
-\label{sec:dest-overview}
+\label{sec:technical-dest-overview}
 
 Guide Dog's destination detection component is responsible for identifying the
 destination object in the scene, and determining it's position in space 
-relative to the camera. The component is only able to detect objects of a solid
-color that contrast highly from the scene. Functionality is provided for
-recalibrating the system for a new color, or for different lighting or
-exposure conditions. 
+relative to the camera. Guide Dog was originally imagined as a system that
+would be able to detect a wide variety of objects, but we were forced to
+build a simpler prototype due to time constraints. As a result, the component 
+is only able to detect objects of a solid color that contrast highly from the 
+scene. Functionality is provided for re-calibrating the system for a new color, 
+or for different lighting or exposure conditions. 
 
 \subsubsection{Operation}
-\label{sec:dest-op}
+\label{sec:technical-dest-op}
 
-(Detailed description of the different functionalities and how they work. For
-instance, describe your tracking / smoothing / recognition algorithm.)
+The destination detection works by first measuring the color of the destination
+object. This measurement can be performed on the fly, by placing the
+destination object in front of the camera, and then measuring the average 
+color within a center region of the image. Once the color of the destination 
+object is known, we compute a similarity image where each pixel represents the 
+similarity of an input pixel's color to the measured destination color. Once 
+this image is obtained, we binarize the pixel values by applying a 
+user-adjustable threshold. The result is a binary image like
+Figure~\ref{fig:destination}. A \emph{blob detection} algorithm is then run over the 
+binary image, which finds the largest connected components within the binary 
+image by treating it as a 6-connected graph. The pixel location of the largest 
+blob is returned as the pixel location of the destination object.
+
+In order to determine the camera-relative position of the destination object,
+we use an average of the pixels near the destination object to compute
+a depth and position. This is returned as the final estimate for the
+position of the destination object. 
 
 \subsubsection{Implementation Details}
-\label{sec:dest-impl}
+\label{sec:technical-dest-impl}
 
-(Some details on the software implementation.)
+The similarity metric we use treats all pixels as vectors in 3-space. In order
+to compute a final similarity value, we first normalize all pixel vectors
+to unit length. We then represent the difference between two pixels by the
+magnitude of their difference vector, e.g., if \emph{c} is the color of a
+given pixel, and \emph{d} is the color of the destination, then the difference
+\begin{math} diff = c - d \end{math} and the similarity \begin{math} 
+sim = 1 - ||diff|| \end{math}. 
+
+In order to make the system more robust to noise, we apply a Gaussian blur
+filter to the similarity image with a relatively large kernel size, e.g.
+10 to 15 pixels in our application. Since the similarity computation tends
+to amplify the appearance of noise, and also because noise tends to
+negatively effect blob detection, this added step helps significantly increase
+the robustness of the component.
+
+After computing a similarity image in this fashion, we binarize the image
+using a simple user-set threshold, and pass the binary image to the OpenCV(cite)
+\emph{SimpleBlobDetector}. This routine reliably detects connected components
+within the image, but requires many parameters to be set properly, e.g.
+min/max blob size, convexity, and separation. After detecting blobs, the 
+largest blob is used to compute a centroid in 3-space using pixels belonging 
+to the blob.
 
 \subsection{Obstacle Detection}
-\label{sec:obs}
+\label{sec:technical-obs}
 
 \begin{figure}
 \includeimage{obstacle.pdf}{5cm}{bb=0 0 300 300}
@@ -56,7 +95,7 @@ instance, describe your tracking / smoothing / recognition algorithm.)
 \end{figure}
 
 \subsubsection{Overview}
-\label{sec:obs-overview}
+\label{sec:technical-obs-overview}
 
 The second component of Guide Dog is the component to detect obstacles. This
 component must detect the obstacles nearby to the user and convey the obstacles'
@@ -66,16 +105,16 @@ know if he she is about to run into an obstacle, not if there is obstacle on the
 other side of the room.
 
 \subsubsection{Operation}
-\label{sec:obs-op}
+\label{sec:technical-obs-op}
 
 The obstacle detection algorithm looks only at the depth information from the
 RGB-D camera. From this, it can see objects such as the floor, obstacles and
-walls. Intuitvely, all of the obstacles will be above the floor, while the floor
+walls. Intuitively, all of the obstacles will be above the floor, while the floor
 itself is not an obstacle. This leads to a simple algorithm to detect the
 obstacles: just remove the floor and everything left is an obstacle.
 
 \subsubsection{Implementation Details}
-\label{sec:pbs-impl}
+\label{sec:technical-obs-impl}
 
 The obstacle detection algorithm views the points in a format created by the
 Point Cloud Library (PCL)\cite{pcl-website}. Each individual pixel viewed by
@@ -86,7 +125,7 @@ represents the whole 3D environment the camera can see.
 The obstacle detection algorithm first looks at the point cloud and extracts the
 plane of the floor. PCL has a built-in planar segmentation library function that
 detects the largest plane in view (there is an issue if the floor is not the
-larget plane in view. This will be discussed in Section~\ref{sec:discussion}).
+largest plane in view. This will be discussed in Section~\ref{sec:eval-obs}).
 The plane detection algorithm gives the \emph{a}, \emph{b}, \emph{c}, and
 \emph{d} coefficients of the in the following planar equation:
 
@@ -107,8 +146,6 @@ are projected onto the floor plane. Then, the floor plane is rotated so that it
 is level. This provides a simple way to analyze the obstacles and calculate
 distances.
 
-TODO: where to talk about previous obstacle detection?
-
 Once the obstacles have been extracted and projected into a 2D space more
 analysis is performed to detect their locations. The obstacles are transferred
 into a black and white image: a white pixel means there is part of an obstacle
@@ -128,14 +165,14 @@ At this point, the obstacle detection algorithm has the locations of all
 obstacles. There are two more steps that must happened before the obstacles are
 sent off to the audio interface. First, the obstacle detection component has not
 yet had any communication with the destination detection component. That means
-that the obstacle detection component has no idea where the destinatio object is
+that the obstacle detection component has no idea where the destination object is
 and that the destination component will get detected and marked as an obstacle!
 In order to prevent this, the obstacle detection component gets the coordinates
 of the destination object from the destination detection component. It then
 compares the coordinates of each obstacle it found with the coordinates of the
-destination object. If any of the obstavle coordinates are close enough to the
+destination object. If any of the obstacle coordinates are close enough to the
 destination, the obstacle detection component assumes that the obstacle must
-actually be the desination and removes it from its list of obstacles. Second,
+actually be the destination and removes it from its list of obstacles. Second,
 the obstacle detection component is only supposed to communicate obstacles that
 are near to the user, not all obstacles. To do this, the obstacle detection
 component simply removes any obstacles that are too far away from the user.
@@ -144,7 +181,7 @@ At this point, the remaining obstacles are ready to be passed off to the audio
 interface so they can be communicated to the user.
 
 \subsection{Audio Interface}
-\label{sec:audio}
+\label{sec:technical-audio}
 
 \begin{figure}
 \includeimage{vsim.pdf}{6cm}{bb=0 0 371 371}
@@ -153,7 +190,7 @@ interface so they can be communicated to the user.
 \end{figure}
 
 \subsubsection{Overview}
-\label{sec:audio-overview}
+\label{sec:technical-audio-overview}
 
 %(Provide the context of what your system does. A drawing might be useful here.)
 Because the intended user of Guide Dog may not have normal vision, the audio 
@@ -164,7 +201,7 @@ they emanate from a particular point in 3D space that corresponds to the
 destination or obstacle.
 
 \subsubsection{Operation}
-\label{sec:audio-op}
+\label{sec:technical-audio-op}
 
 %(Detailed description of the different functionalities and how they work. For
 %instance, describe your tracking / smoothing / recognition algorithm.)
@@ -180,13 +217,13 @@ The audio system signals the location of the destination through the use of an
 audio beacon that sounds like a series of synthesized echoing beeps. It is fairly
 easy to distinguish changes in tone using the beeps and it is not a sound that
 quickly gets annoying to the user. The user is expected to follow the direction
-of the beacon in order to get to the desination. To communicate distance to the 
+of the beacon in order to get to the destination. To communicate distance to the
 destination, the audio system increases or decreases the pitch of the beacon as 
 the user gets closer or further away, respectively. Once the user arrives within
 a few feet from the destination, the system plays a jingle to tell the user that 
 he or she has arrived. 
 
-As for obstacles, the audio system uses a ding that sounds simliar 
+As for obstacles, the audio system uses a ding that sounds similar
 to the one that is played when a car door is left ajar. Like with the beacon, 
 the goal was to find a sound that was pleasant over moderate periods of time. 
 Furthermore, the ding is clearly distinguishable from the beacon. Unlike the
@@ -198,7 +235,7 @@ too many, which would overwhelm and confuse the user, or the ones that are
 particularly far would cause the user to correct his route at times when the 
 path in front of him is actually clear.
 
-The first verion of the audio system played audio cues as though they were 
+The first version of the audio system played audio cues as though they were
 actually emanating from an object's real 3D position using stereo sound. However,
 users could only get a fuzzy indication of where an object was located with 
 respect to it being to the left or right of the user. Thus, to further clarify 
@@ -242,7 +279,7 @@ have the ability within Guide Dog to toggle between them.
 \end{figure}
 
 \subsubsection{Implementation Details}
-\label{sec:audio-impl}
+\label{sec:technical-audio-impl}
 
 %(Some details on the software implementation.)
 The audio system is abstracted away from the other parts of Guide Dog and
