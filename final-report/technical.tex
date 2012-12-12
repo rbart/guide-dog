@@ -87,7 +87,7 @@ represents the whole 3D environment the camera can see.
 The obstacle detection algorithm first looks at the point cloud and extracts the
 plane of the floor. PCL has a built-in planar segmentation library function that
 detects the largest plane in view (there is an issue if the floor is not the
-largest plane in view. This will be discussed in Section~\ref{sec:discussion}).
+largest plane in view. This will be discussed in Section~\ref{sec:eval-obs}).
 The plane detection algorithm gives the \emph{a}, \emph{b}, \emph{c}, and
 \emph{d} coefficients of the in the following planar equation:
 
@@ -107,8 +107,6 @@ convert the 3D obstacles in 2D space. To do this, the 3D obstacle coordinates
 are projected onto the floor plane. Then, the floor plane is rotated so that it
 is level. This provides a simple way to analyze the obstacles and calculate
 distances.
-
-TODO: where to talk about previous obstacle detection?
 
 Once the obstacles have been extracted and projected into a 2D space more
 analysis is performed to detect their locations. The obstacles are transferred

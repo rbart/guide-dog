@@ -11,6 +11,67 @@ what worked, what didn't work and why.
 \subsection{Obstacle Detection}
 \label{sec:eval-obs}
 
+The first difficulty the authors encountered with the obstacle detection
+component was rotating the 3D view of the environment such that the floor was
+level. This was an important step in the process of converting the 3D
+environment to a 2D top down view (described in
+Section~\ref{sec:technical-obs-impl}). The authors first attempted a series of
+matrix rotations and translations, but had little luck getting this to work.
+Instead, the authors discovered a projection library function in PCL. This takes
+a plane and projects all the points in the environment onto this plane. The
+environment if first projected onto the ground plane, which flattens all of the
+obstacles into 2D, on the ground plane. Then, this result is projected on to the
+X-Z axis. This way the Y component is removed, resulting in a 2D image.
+
+Another aspect of the obstacle detection component the authors experimented with
+was actually identifying the locations of the obstacles. The first approach
+simply split the environment into a left and right half. The obstacle detection
+component would then identify the closest point on the left side and the
+closest point on the right side as obstacles. This was a simplistic approach,
+but didn't work well for a few reasons. First, it did not pay attention to the
+size of the obstacles. For example, the image contains small amounts of noise
+that appear as small obstacles. However, the obstacle detection component should
+not include these as obstacles. Second, it did not group contiguous points into
+a single obstacle. This is not a problem if the obstacles are both restricted to
+only one side of the environment. However, it was often the case that an
+obstacle would be right in the center. So when the obstacle detection component
+searched for the two closest points on the left and right it would settle upon
+two points that were actually on the same obstacle.
+
+To address these problems, the authors switched to using the blob detection
+approach described in Section~\ref{sec:technical-obs-impl}. The blob detection
+algorithm has parameters to set for the minimum and maximum allowable size of
+the obstacles. By setting the minimum high enough, this filters out the
+small areas of noise that weren't actually obstacles. Further, since the blob
+detection clumps together contiguous areas there is no concern of errorneously
+identifying a single physical obstacle as multiple obsetacles.
+
+One current issue the obstacle detection component has it when it fails to
+detect the ground plane. The planar segmentation algorithm the obstacle
+detection component uses doesn't actually detect the ground, it detects the
+largest plane in view. Often times, this will be the ground. However, if the
+camera is pointed too high or obstacles are blocking most of the ground it is
+likely that the detected plane will not actually be the ground. The obstacle
+detection component currently assumes that the largest plane in view will be the
+ground plane. This results in an incorrect 2D top down view of the environment
+when the largest plane detected is not actually the ground and therefore
+incorrect detection of the obstacles. One way this could be handled is by
+restricting the legal angles of the ground plane. If the detected ground plane
+is outside of the boundaries, the obstacle detection component could remove the
+points in the detected plane and then run the plane detection algorithm again
+until it finds the plane within the legal boundaries of a ground plane.
+
+The obstacle detection component also fails if the plane detection algorithm
+can't find a plane at all. In this case, the obstacle detection component
+currently stops and does not report any obstacles. One way to fix this would be
+to use the ground plane equation from the previous camera frame. This would not
+lead to the best results however, since the camera angle will naturally change
+slightly between frames as the user is moving through the environment. Using an
+old ground plane would likely remove some of the floor, but leave parts of the
+floor that don't match up exactly with the old ground plane. This would result
+in parts of the floor appearing like obstacles, which would be confusing to the
+user.
+
 
 \subsection{Audio Interface}
 \label{sec:eval-audio}
