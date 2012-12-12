@@ -135,8 +135,7 @@ are near to the user, not all obstacles. To do this, the obstacle detection
 component simply removes any obstacles that are too far away from the user.
 
 At this point, the remaining obstacles are ready to be passed off to the audio
-interface so they can be communicated with the user.
-
+interface so they can be communicated to the user.
 
 \subsection{Audio Interface}
 \label{sec:audio}
@@ -150,13 +149,84 @@ interface so they can be communicated with the user.
 \subsubsection{Overview}
 \label{sec:audio-overview}
 
-(Provide the context of what your system does. A drawing might be useful here.)
+%(Provide the context of what your system does. A drawing might be useful here.)
+Because the intended user of Guide Dog may not have normal vision, the audio 
+component is meant to provide guidance to the user without the need of sight. It
+uses 3D audio cues to direct the user toward the destination and warn of any 
+obstacles in the user's way. This means that the audio cues appears as though
+they emanate from a particular point in 3D space that corresponds to the
+destination or obstacle.
 
 \subsubsection{Operation}
 \label{sec:audio-op}
 
-(Detailed description of the different functionalities and how they work. For
-instance, describe your tracking / smoothing / recognition algorithm.)
+%(Detailed description of the different functionalities and how they work. For
+%instance, describe your tracking / smoothing / recognition algorithm.)
+Guide Dog's audio interface was initially imagined to be one that used voice 
+commands like in a GPS navigation system. However, such a system would require
+mapping and path finding within the scene, which would have been too complex
+given the time constraints. Furthermore, people are very capable with finding
+their own paths given a few hints about where they need to be going and what
+may be in their way. Thus, Guide Dog adopted a system that gives audio hints to
+the user instead.
+
+The audio system signals the location of the destination through the use of an
+audio beacon that sounds like a series of synthesized echoing beeps. It is fairly
+easy to distinguish changes in tone using the beeps and it is not a sound that
+quickly gets annoying to the user. The user is expected to follow the direction
+of the beacon in order to get to the desination. To communicate distance to the 
+destination, the audio system increases or decreases the pitch of the beacon as 
+the user gets closer or further away, respectively. Once the user arrives within
+a few feet from the destination, the system plays a jingle to tell the user that 
+he or she has arrived. 
+
+As for obstacles, the audio system uses a ding that sounds simliar 
+to the one that is played when a car door is left ajar. Like with the beacon, 
+the goal was to find a sound that was pleasant over moderate periods of time. 
+Furthermore, the ding is clearly distinguishable from the beacon. Unlike the
+destination beacon, the user is expected to pick the direction of the alert and
+avoid it. Only obstacles that are within about five feet of the user get alerted.
+This strategy allows the user enough room to correct his or her course while 
+still be helpful. If the system alerted obstacles at any distance, there may be 
+too many, which would overwhelm and confuse the user, or the ones that are 
+particularly far would cause the user to correct his route at times when the 
+path in front of him is actually clear.
+
+The first verion of the audio system played audio cues as though they were 
+actually emanating from an object's real 3D position using stereo sound. However,
+users could only get a fuzzy indication of where an object was located with 
+respect to it being to the left or right of the user. Thus, to further clarify 
+the direction of an object, the audio system continues to use stereo sound, but
+divides the field of view of the camera into discrete regions that over-emphasize 
+the front, left, and right directions. 
+
+There were two designs implemented for the regions. The first used three regions
+representing left, front, and right. Since the Asus Xtion camera has a 58 degree
+field of vision on the horizontal, the audio system assigns any object that
+falls within the middle 20 degrees of the view as considered being in front. The
+user will hear the audio cues with equal weight in both his or her ears. Any
+objects that are located outside those middle 20 degrees are considered to the
+immediate left or right. Thus, if an object is to the right of the middle region,
+the user only hears sound in the right ear and vice versa for objects in the
+left region. When finding the destination, the user can position the destination
+in front and walk forward. If the user happens to not be perpendicular to the
+object in real life, the destination will eventually fall to the left or right
+as the user gets closer, which then forces the user to reposition. However, this
+strategy appeared limited since it only communicates three directions. Thus, the
+second strategy tried improve upon this.
+
+In the second iteration on regions, the audio system divided the field of view
+into five regions in an attempt to get finer directional sound. This time, the
+middle 10 degrees was devoted to the front. The 15 degree arc to each side of 
+the middle indicates a gradual left or right and the final 9 degrees represent
+a hard left or right. The front and hard left or right regions function in the 
+same manner as the first design, but the 15 degree arcs are devoted to a gradual
+representation of left or right. This means that as the location of an object
+sweeps through gradual right region, the weight of the sound playing in the
+right ear is slowly increased while the left ear is slowed decreased. This 
+strategy gives the user a better sense of how far to the right or left an object
+is located compared to the first design. Both designs are functional and users
+have the ability within Guide-Dog to toggle between them.
 
 \subsubsection{Implementation Details}
 \label{sec:audio-impl}

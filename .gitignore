@@ -1,6 +1,9 @@
 # Ignore emacs backup files
 *~
 
+# Ignore vim backup files
+*.swp
+
 # ignore object files and archive files
 *.[oa]
 
