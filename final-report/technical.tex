@@ -1,7 +1,7 @@
 \section{Technical Details (\textasciitilde 2-3 pages)}
 \label{sec:technical}
 
-Guide Dog is composed of the three separate components decribed below: destination detection
+Guide Dog is composed of the three separate components described below: destination detection
 (see Section~\ref{sec:technical-dest}),
 obstacle detection (see Section~\ref{sec:technical-obs}), and the audio
 interface (see Section~\ref{sec:technical-audio}).
@@ -71,7 +71,7 @@ other side of the room.
 
 The obstacle detection algorithm looks only at the depth information from the
 RGB-D camera. From this, it can see objects such as the floor, obstacles and
-walls. Intuitvely, all of the obstacles will be above the floor, while the floor
+walls. Intuitively, all of the obstacles will be above the floor, while the floor
 itself is not an obstacle. This leads to a simple algorithm to detect the
 obstacles: just remove the floor and everything left is an obstacle.
 
@@ -87,7 +87,7 @@ represents the whole 3D environment the camera can see.
 The obstacle detection algorithm first looks at the point cloud and extracts the
 plane of the floor. PCL has a built-in planar segmentation library function that
 detects the largest plane in view (there is an issue if the floor is not the
-larget plane in view. This will be discussed in Section~\ref{sec:discussion}).
+largest plane in view. This will be discussed in Section~\ref{sec:discussion}).
 The plane detection algorithm gives the \emph{a}, \emph{b}, \emph{c}, and
 \emph{d} coefficients of the in the following planar equation:
 
@@ -129,14 +129,14 @@ At this point, the obstacle detection algorithm has the locations of all
 obstacles. There are two more steps that must happened before the obstacles are
 sent off to the audio interface. First, the obstacle detection component has not
 yet had any communication with the destination detection component. That means
-that the obstacle detection component has no idea where the destinatio object is
+that the obstacle detection component has no idea where the destination object is
 and that the destination component will get detected and marked as an obstacle!
 In order to prevent this, the obstacle detection component gets the coordinates
 of the destination object from the destination detection component. It then
 compares the coordinates of each obstacle it found with the coordinates of the
-destination object. If any of the obstavle coordinates are close enough to the
+destination object. If any of the obstacle coordinates are close enough to the
 destination, the obstacle detection component assumes that the obstacle must
-actually be the desination and removes it from its list of obstacles. Second,
+actually be the destination and removes it from its list of obstacles. Second,
 the obstacle detection component is only supposed to communicate obstacles that
 are near to the user, not all obstacles. To do this, the obstacle detection
 component simply removes any obstacles that are too far away from the user.
@@ -181,13 +181,13 @@ The audio system signals the location of the destination through the use of an
 audio beacon that sounds like a series of synthesized echoing beeps. It is fairly
 easy to distinguish changes in tone using the beeps and it is not a sound that
 quickly gets annoying to the user. The user is expected to follow the direction
-of the beacon in order to get to the desination. To communicate distance to the 
+of the beacon in order to get to the destination. To communicate distance to the
 destination, the audio system increases or decreases the pitch of the beacon as 
 the user gets closer or further away, respectively. Once the user arrives within
 a few feet from the destination, the system plays a jingle to tell the user that 
 he or she has arrived. 
 
-As for obstacles, the audio system uses a ding that sounds simliar 
+As for obstacles, the audio system uses a ding that sounds similar
 to the one that is played when a car door is left ajar. Like with the beacon, 
 the goal was to find a sound that was pleasant over moderate periods of time. 
 Furthermore, the ding is clearly distinguishable from the beacon. Unlike the
@@ -199,7 +199,7 @@ too many, which would overwhelm and confuse the user, or the ones that are
 particularly far would cause the user to correct his route at times when the 
 path in front of him is actually clear.
 
-The first verion of the audio system played audio cues as though they were 
+The first version of the audio system played audio cues as though they were
 actually emanating from an object's real 3D position using stereo sound. However,
 users could only get a fuzzy indication of where an object was located with 
 respect to it being to the left or right of the user. Thus, to further clarify 
