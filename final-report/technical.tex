@@ -228,15 +228,15 @@ particularly far would cause the user to correct his route at times when the
 path in front of him is actually clear.
 
 The audio system defines five discrete regions that an object may be located
-within. These regions help the system exagerate the left and right directions
+within. These regions help the system exaggerate the left and right directions
 when sounds are played back to the user when compared against playing the
 sound purely as though it were emanating that its actual location in 3D space.
 This strategy gives a clear indication which direction an object is located in.
 These regions are based on the angle of the object's location relative to the
 user. An object in front of the user is between 85 and 95 degrees. The 15 degree
 arcs to both sides of the middle region are gradual left and left. For angles
-greater than 110, the object is considered to the imediate left and angles less
-than 70 degrees place an object to the imediate right.
+greater than 110, the object is considered to the immediate left and angles less
+than 70 degrees place an object to the immediate right.
 Section~\ref{sec:eval-audio} describes the development of the region design in greater
 detail.
 
@@ -255,7 +255,7 @@ and obstacle systems fill the queue with sound sources and the threads pop them
 off and become responsible for playing each source. OpenAL uses the concept of a
 listener to define the coordinates of the person listening and sources to define
 the objects playing a sound. The listener and sources both have locations within
-the OpenAL world. SonicDog defines the listner at \emph{(0, 0, 0)} under the
+the OpenAL world. SonicDog defines the listener at \emph{(0, 0, 0)} under the
 \emph{(x, y, z)} coordinate system. All other sound sources are placed relative 
 to the listener by defining the \emph{x} and \emph{z} coordinates of the source 
 since the other systems in Guide Dog reduce the world to a 2D plane. Positive
@@ -285,7 +285,7 @@ the source. Afterwards, the thread cleans up all the memory allocated for the
 source and goes back to pull more sources off the job queue or blocks if the 
 queue is empty.
 
-The math used to place an object in a specific region is straightfoward. Given
+The math used to place an object in a specific region is straightforward. Given
 the \emph{x} and \emph{z} of an object, SonicDog uses arctangent to calculate
 the angle \begin{math}\theta\end{math} between the object and the listener and 
 the Pythagorean theorem to calculate the distance \emph{d} from the object to 
