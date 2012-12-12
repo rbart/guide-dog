@@ -37,13 +37,38 @@ exposure conditions.
 \subsubsection{Operation}
 \label{sec:technical-dest-op}
 
-(Detailed description of the different functionalities and how they work. For
-instance, describe your tracking / smoothing / recognition algorithm.)
+The destination detection works by first measuring the color of the destination
+object. Once the color of the destination object is known, we compute a
+similarity image where each pixel represents the similarity of an input
+pixel's color to the measured destination color. Once this image is obtained,
+we binarize the pixel values by applying an adjustable threshold. The result
+is a binary image like \ref{fig:destination}. A \emph{blob detection}
+algorithm is then run over the binary image, and the pixel location of the
+largest blob is returned as the pixel location of the destination object.
+
+In order to determine the camera-relative position of the destination object,
+we use an average of the pixels near the destination object to compute
+a depth and position. This is returned as the final estimate for the
+position of the destination object. 
 
 \subsubsection{Implementation Details}
 \label{sec:technical-dest-impl}
 
-(Some details on the software implementation.)
+The similarity metric we use treats all pixels as vectors in 3-space. In order
+to compute a final similarity value, we first normalize all pixel vectors
+to unit length. We then represent the difference between two pixels by the
+magnitude of their difference vector, e.g., if \emph{c} is the color of a
+given pixel, and \emph{d} is the color of the destination, then the difference
+\begin{math} diff = c - d \end{math} and the similarity \begin{math} 
+sim = 1 - ||diff|| \end{math}. 
+
+After computing a similarity image in this fashion, we binarize the image
+using a simple user-set threshold, and pass the binary image to the OpenCV(cite)
+\emph{SimpleBlobDetector}. This routine reliably detects connected components
+within the image, but requires many parameters to be set properly, e.g.
+min/max blob size, convexity, and separation. After detecting blobs, the 
+largest blob is used to compute a centroid in 3-space using pixels belonging 
+to the blob.
 
 \subsection{Obstacle Detection}
 \label{sec:technical-obs}
