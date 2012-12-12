@@ -76,7 +76,7 @@ negatively effect blob detection, this added step helps significantly increase
 the robustness of the component.
 
 After computing a similarity image in this fashion, we binarize the image
-using a simple user-set threshold, and pass the binary image to the OpenCV(cite)
+using a simple user-set threshold, and pass the binary image to the OpenCV~\cite{opencv-website}
 \emph{SimpleBlobDetector}. This routine reliably detects connected components
 within the image, but requires many parameters to be set properly, e.g.
 min/max blob size, convexity, and separation. After detecting blobs, the 
@@ -117,7 +117,7 @@ obstacles: just remove the floor and everything left is an obstacle.
 \label{sec:technical-obs-impl}
 
 The obstacle detection algorithm views the points in a format created by the
-Point Cloud Library (PCL)\cite{pcl-website}. Each individual pixel viewed by
+Point Cloud Library (PCL)~\cite{pcl-website}. Each individual pixel viewed by
 the camera is represented by an X coordinate, Y coordinate, depth and RGB color.
 A data structure storing all of these points is called a ``point cloud'' and
 represents the whole 3D environment the camera can see.
@@ -151,7 +151,7 @@ analysis is performed to detect their locations. The obstacles are transferred
 into a black and white image: a white pixel means there is part of an obstacle
 at that location, a black pixel means that location is empty. An example of this
 image is shown in Figure~\ref{fig:obstacle}. This image is then
-passed off to a blob detection algorithm in OpenCV\cite{opencv-website}. The
+passed off to a blob detection algorithm in OpenCV~\cite{opencv-website}. The
 blob detection algorithm groups together contiguous areas of points. This is
 helpful because it takes a bunch of individual white pixels that are all next to
 each other and groups them into one single ``blob'' with a single X and Y
@@ -246,7 +246,7 @@ detail.
 %(Some details on the software implementation.)
 The audio system is abstracted away from the other parts of Guide Dog and
 written as a class with member functions that the other systems can invoke. At 
-the core of this class, know as SonicDog, is OpenAL\cite{openal-website}, which 
+the core of this class, know as SonicDog, is OpenAL~\cite{openal-website}, which
 is an open source audio library typically used in video games to handle 3D
 sound. 
 

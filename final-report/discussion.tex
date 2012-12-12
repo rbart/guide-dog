@@ -12,15 +12,14 @@ The most obvious next step for the destination detection component is to
 replace it with a more sophisticated, machine learning based algorithm that
 is able to learn and detect common household objects with high precision.
 Such an algorithm would probably be based on feature learning, such as
-previous object-detection work by (Lai et. al.)
-%(ref ``Destination-based Object Labeling in 3D Scenes'')
+previous object-detection work~\cite{lai_icra12}.
 This would enable the system to detect and guide the user to real-world
 objects of practical interest to the user, greatly increasing the
 utility of the system.
 
 An improvement of even greater scope, which would benefit the system as
 a whole, would be the addition of a 3D-mapping component and a system
-for localizing the cameras position within a pre-existing 3D map. This
+for localizing the cameras position within a pre-existing 3D map~\cite{Du:2011:IMI:2030112.2030123}. This
 would allow the system to be placed into a previously-mapped space,
 determine its location, and guide the user to a distant point well
 outside the line of sight of the camera. A reasonably sophisticated 
@@ -28,8 +27,4 @@ localization component would remove the need to see the floor at all
 times, enabling more sophisticated obstacle detection, and it would 
 allow shortest paths to be computed through a 3D map, enabling audio
 guidance with more detailed cues for guiding the user along the path
-(e.g. synthetic speech). Previous work in this domain (Du et. al.)
-%``Interactive 3D Modeling of Indoor Environments with a Consumer Depth Camera'')
-
-
-
+(e.g. synthetic speech).
