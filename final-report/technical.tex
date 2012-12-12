@@ -14,7 +14,7 @@ below.
 \end{figure}
 
 \subsection{Destination Detection}
-\label{sec:dest}
+\label{sec:technical-dest}
 
 \begin{figure}
 \includeimage{destination.pdf}{8cm}{bb=0 0 474 474}
@@ -24,7 +24,7 @@ to the color of the destination object}
 \end{figure}
 
 \subsubsection{Overview}
-\label{sec:dest-overview}
+\label{sec:technical-dest-overview}
 
 Guide Dog's destination detection component is responsible for identifying the
 destination object in the scene, and determining it's position in space 
@@ -34,18 +34,18 @@ recalibrating the system for a new color, or for different lighting or
 exposure conditions. 
 
 \subsubsection{Operation}
-\label{sec:dest-op}
+\label{sec:technical-dest-op}
 
 (Detailed description of the different functionalities and how they work. For
 instance, describe your tracking / smoothing / recognition algorithm.)
 
 \subsubsection{Implementation Details}
-\label{sec:dest-impl}
+\label{sec:technical-dest-impl}
 
 (Some details on the software implementation.)
 
 \subsection{Obstacle Detection}
-\label{sec:obs}
+\label{sec:technical-obs}
 
 \begin{figure}
 \includeimage{obstacle.pdf}{5cm}{bb=0 0 300 300}
@@ -56,7 +56,7 @@ instance, describe your tracking / smoothing / recognition algorithm.)
 \end{figure}
 
 \subsubsection{Overview}
-\label{sec:obs-overview}
+\label{sec:technical-obs-overview}
 
 The second component of Guide Dog is the component to detect obstacles. This
 component must detect the obstacles nearby to the user and convey the obstacles'
@@ -66,7 +66,7 @@ know if he she is about to run into an obstacle, not if there is obstacle on the
 other side of the room.
 
 \subsubsection{Operation}
-\label{sec:obs-op}
+\label{sec:technical-obs-op}
 
 The obstacle detection algorithm looks only at the depth information from the
 RGB-D camera. From this, it can see objects such as the floor, obstacles and
@@ -75,7 +75,7 @@ itself is not an obstacle. This leads to a simple algorithm to detect the
 obstacles: just remove the floor and everything left is an obstacle.
 
 \subsubsection{Implementation Details}
-\label{sec:pbs-impl}
+\label{sec:technical-obs-impl}
 
 The obstacle detection algorithm views the points in a format created by the
 Point Cloud Library (PCL)\cite{pcl-website}. Each individual pixel viewed by
@@ -144,7 +144,7 @@ At this point, the remaining obstacles are ready to be passed off to the audio
 interface so they can be communicated to the user.
 
 \subsection{Audio Interface}
-\label{sec:audio}
+\label{sec:technical-audio}
 
 \begin{figure}
 \includeimage{vsim.pdf}{6cm}{bb=0 0 371 371}
@@ -153,7 +153,7 @@ interface so they can be communicated to the user.
 \end{figure}
 
 \subsubsection{Overview}
-\label{sec:audio-overview}
+\label{sec:technical-audio-overview}
 
 %(Provide the context of what your system does. A drawing might be useful here.)
 Because the intended user of Guide Dog may not have normal vision, the audio 
@@ -164,7 +164,7 @@ they emanate from a particular point in 3D space that corresponds to the
 destination or obstacle.
 
 \subsubsection{Operation}
-\label{sec:audio-op}
+\label{sec:technical-audio-op}
 
 %(Detailed description of the different functionalities and how they work. For
 %instance, describe your tracking / smoothing / recognition algorithm.)
@@ -235,6 +235,6 @@ is located compared to the first design. Both designs are functional and users
 have the ability within Guide-Dog to toggle between them.
 
 \subsubsection{Implementation Details}
-\label{sec:audio-impl}
+\label{sec:technical-audio-impl}
 
 (Some details on the software implementation.)
