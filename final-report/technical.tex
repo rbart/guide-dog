@@ -65,8 +65,8 @@ to compute a final similarity value, we first normalize all pixel vectors
 to unit length. We then represent the difference between two pixels by the
 magnitude of their difference vector, e.g., if \emph{c} is the color of a
 given pixel, and \emph{d} is the color of the destination, then the difference
-\begin{math} diff = c - d \end{math} and the similarity \begin{math} 
-sim = 1 - ||diff|| \end{math}. 
+\begin{math} \textit{diff} = c - d \end{math} and the similarity \begin{math}
+\textit{sim} = 1 - ||\textit{diff}|| \end{math}.
 
 In order to make the system more robust to noise, we apply a Gaussian blur
 filter to the similarity image with a relatively large kernel size, e.g.
