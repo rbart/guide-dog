@@ -49,13 +49,16 @@ this image is obtained, we binarize the pixel values by applying a
 user-adjustable threshold. The result is a binary image like
 Figure~\ref{fig:destination}. A \emph{blob detection} algorithm is then run over the 
 binary image, which finds the largest connected components within the binary 
-image by treating it as a 6-connected graph. The pixel location of the largest 
-blob is returned as the pixel location of the destination object.
+image by treating it as an 8-connected graph. If multiple blobs are detected,
+we use the largest one. 
 
-In order to determine the camera-relative position of the destination object,
-we use an average of the pixels near the destination object to compute
-a depth and position. This is returned as the final estimate for the
-position of the destination object. 
+Since the blobs describe a pixel location in the image, we must now convert 
+this location into a real-world position relative to the camera. We take
+advantage of PCL~\cite{pcl-website}, which provides camera-relative XYZ coordinates
+for each pixel. We use this to compute the average XYZ position for pixels
+within the largest blob, which is returned as the final estimate of the location
+of the destination object. 
+
 
 \subsubsection{Implementation Details}
 \label{sec:technical-dest-impl}
