@@ -1,8 +1,35 @@
 \section{Discussion (\textasciitilde 1 column)}
 \label{sec:discussion}
 
-How well does your solution work, what are the next steps/what is the future
-work, what are other applications of your technology? Any interesting insights
-or lessons learned?
+Guide Dog works well within the limits of what its prototype components were
+designed for. However, as a complete system, Guide Dog falls short of the 
+vision its authors had originally intended for it. It is only able to track
+brightly colored objects, it requires that the ground plane be within view
+at all times, and it cannot handle the case where the destination is outside
+the viewing range of the camera. 
 
-What you would you do differently or how would you re-design in the future?
+The most obvious next step for the destination detection component is to
+replace it with a more sophisticated, machine learning based algorithm that
+is able to learn and detect common household objects with high precision.
+Such an algorithm would probably be based on feature learning, such as
+previous object-detection work by (Lai et. al.)
+%(ref ``Destination-based Object Labeling in 3D Scenes'')
+This would enable the system to detect and guide the user to real-world
+objects of practical interest to the user, greatly increasing the
+utility of the system.
+
+An improvement of even greater scope, which would benefit the system as
+a whole, would be the addition of a 3D-mapping component and a system
+for localizing the cameras position within a pre-existing 3D map. This
+would allow the system to be placed into a previously-mapped space,
+determine its location, and Guide the user to a distant point well
+outside the line of sight of the camera. A reasonably sophisticated 
+localization component would remove the need to see the floor at all
+times, enabling more sophisticated obstacle detection, and it would 
+allow shortest paths to be computed through a 3D map, enabling audio
+guidance with more detailed cues for guiding the user along the path
+(e.g. synthetic speech). Previous work in this domain (Du et. al.)
+%``Interactive 3D Modeling of Indoor Environments with a Consumer Depth Camera'')
+
+
+
