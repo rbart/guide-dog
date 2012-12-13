@@ -8,7 +8,7 @@ Although the authors originally intended to be able to detect a variety
 of complex objects as destination targets, it quickly became apparent that
 the difficulty of detecting an arbitrary object had been underestimated.
 As a placeholder for a more sophisticated object detector, we implemented
-a detector that could find and track an object as long as it stood out
+something that could find and track an object as long as it stood out
 clearly from its environment. This led to the limitation that
 destination objects work best when they are of a bright, solid color. We found
 that a magenta color tended to stand out best from typical interior
@@ -67,14 +67,14 @@ approach described in Section~\ref{sec:technical-obs-impl}. The blob detection
 algorithm has parameters to set for the minimum and maximum allowable size of
 the obstacles. By setting the minimum high enough, this filters out the
 small areas of noise that weren't actually obstacles. Further, since the blob
-detection clumps together contiguous areas there is no concern of erroneously
+detection clumps together contiguous areas, there is no concern of erroneously
 identifying a single physical obstacle as multiple obstacles.
 
-One current issue the obstacle detection component has is when it fails to
+One current issue the obstacle detection component is when it fails to
 detect the ground plane. The planar segmentation algorithm the obstacle
 detection component uses doesn't actually detect the ground, it detects the
 largest plane in view. Often times, this will be the ground. However, if the
-camera is pointed too high or obstacles are blocking most of the ground it is
+camera is pointed too high or if obstacles are blocking most of the ground, it is
 likely that the detected plane will not actually be the ground. The obstacle
 detection component currently assumes that the largest plane in view will be the
 ground plane. This results in an incorrect 2D top down view of the environment
@@ -124,7 +124,7 @@ following the beacon and avoiding obstacles. Later on, a new simulator with
 visual output was created based off the tutorial by~\cite{openal-tutorial} using
 OpenGL~\cite{opengl-website}. Figure~\ref{fig:vsim} gives a description of the 
 \emph{vsim} program. With it, the authors could test what strategies worked and
-verify that any calculates made in SonicDog were correct independent of the
+verify that any calculations made in SonicDog were correct independent of the
 other systems in Guide Dog.
 
 \begin{figure}
