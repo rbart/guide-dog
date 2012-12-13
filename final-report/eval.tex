@@ -160,7 +160,7 @@ the user only hears sound in the right ear and vice versa for objects in the
 left region. When finding the destination, the user can position the destination 
 in front and walk forward. If the user is actually off-center from the object in 
 real life, the destination will eventually fall to the left or right as the user 
-gets closer, which then forces the user to rotate and reposition in in the 
+gets closer, which then forces the user to rotate and reposition in the 
 middle. However, this strategy appeared limited since it only communicates 
 three directions. Thus, the second strategy tried to improve upon this.
 
@@ -171,7 +171,7 @@ the middle indicates a partial left or right direction and the final 9 degrees
 represent a complete left or right. The front and complete left or right regions 
 function in the same manner as the first design, but the 15 degree arcs are 
 devoted to a partial representation of left or right. For instance, as the
-location of an object sweeps to the right through partial right region, the 
+location of an object sweeps to the right through the partial right region, the 
 weight of the sound playing in the right ear slowly increases while the sound in
 the left ear is slowly decreases. Compared to the first design, this strategy 
 gives the user a better sense of slight changes in an object's direction. Though
@@ -191,13 +191,13 @@ too abrasive and were discarded. The next attempts were great improvements.
 In finding a good sound for the beacon, the authors wanted to emulate the sonar
 sound from a submarine that one typically hears in movies. The second attempt
 lead to a high pitched ping that sounded like hitting two metal pipes against
-one another. It was serviceable but as the pitch increased, it became more
+one another. It was serviceable, but as the pitch increased, it became more
 unpleasant. The current version of the audio system uses a synthesized triple
 beep sound that also conveys the sense of using sonar. It also has the
 advantage of continuing to be pleasant sounding as the pitch increases. In
 addition, it should be noted that the early white noise version of the beacon
 denoted distance by increasing the volume and tempo as the user walked closer.
-When the audio system started using the sonar sounds, increasing the tempo at
+When the audio system started using the sonar sounds, increasing the tempo
 while the sound was played became too unpleasant. Thus, pitch was chosen to
 communicate distance.
 
@@ -205,15 +205,15 @@ For the second version of the obstacle sound, the authors wanted a sound that
 could quickly grab the user's attention. For a while, the authors used a buzzing
 sound, but after doing real user testing with the complete Guide Dog system,
 the buzz was deemed to be too abrasive. This led to the use of a ding sound
-similar to the one that is played when a person leaves the car door open. In
+similar to the one that is played when a person leaves a car door open. In
 rapid succession, the ding is neutral enough that it does not become unpleasant
 and it still sounds distinctive when played against the beacon.
 
 Another design decision made in regards to obstacles was whether or not to alert
 obstacles located to the complete left or right of the user. The user is told to
-steer away from obstacles, but in practice, most obstacles that alerted to the
+steer away from obstacles, but in practice, most obstacles that are alerted to the
 left or right of the user do not obstruct his or her path if he or she continues
-to walk forward. Thus narrow walkways were often ignored. It was too confusing
+to walk forward. Thus, narrow walkways were often ignored. It was too confusing
 to instruct the user to take heed of obstacle alerts to the side while avoid
 the ones in front since the audio system used the same ding for both. Thus, the
 authors tried turning off obstacles to the sides, which in practiced allowed
