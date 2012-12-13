@@ -201,35 +201,29 @@ destination or obstacle.
 %(Detailed description of the different functionalities and how they work. For
 %instance, describe your tracking / smoothing / recognition algorithm.)
 The audio system signals the location of the destination through the use of an
-audio beacon that sounds like a series of synthesized echoing beeps. It is fairly
-easy to distinguish changes in tone using the beeps and it is not a sound that
-quickly gets annoying to the user. The user is expected to follow the direction
-of the beacon in order to get to the destination. To communicate distance to the
-destination, the audio system increases or decreases the pitch of the beacon as 
-the user gets closer or further away, respectively. Once the user arrives within
-a few feet from the destination, the system plays a jingle to tell the user that 
-he or she has arrived. 
+audio beacon that sounds like a series of synthesized echoing beeps. It is
+fairly easy to distinguish changes in tone using the beeps and it is not a sound
+that quickly gets annoying to the user. The user is expected to follow the
+direction of the beacon in order to get to the destination. To communicate
+distance to the destination, the audio system increases or decreases the pitch
+of the beacon as the user gets closer or further away, respectively. Once the
+user arrives within a few feet from the destination, the system plays a jingle
+to tell the user that he or she has arrived. 
 
-As for obstacles, the audio system uses a ding that sounds similar
-to the one that is played when a car door is left ajar. Like with the beacon, 
-the goal was to find a sound that was pleasant over moderate periods of time. 
-Furthermore, the ding is clearly distinguishable from the beacon. Unlike the
-destination beacon, the user is expected to
-avoid the direction of the alert. Only obstacles that are within about five feet of the user get alerted.
-This strategy allows the user enough room to correct his or her course while 
-still being helpful. If the system alerted obstacles at any distance, there may be 
-too many, which would overwhelm and confuse the user, or the ones that are 
-particularly far would cause the user to correct his route at times when the 
-path in front of him is actually clear.
+As for obstacles, the audio system uses a ding that sounds similar to the one
+that is played when a car door is left ajar. Like with the beacon, the goal was
+to find a sound that was pleasant over moderate periods of time.  Furthermore,
+the ding is clearly distinguishable from the beacon. Unlike the destination
+beacon, the user is expected to
 
-The audio system defines five discrete regions that an object may be located 
-within. Compared to playing the sound purely as though it were emanating from 
-its actual location in 3D space, these regions help the system exaggerate the 
-left and right directions when sounds are played back to the user.  This 
+The audio system defines five discrete regions that an object may be located
+within. Compared to playing the sound purely as though it were emanating from
+its actual location in 3D space, these regions help the system exaggerate the
+left and right directions when sounds are played back to the user.  This
 strategy gives a clearer indication of which direction an object is located in.
-These regions are based on the angle of the object's location relative to the 
-user. The five regions are defined as full left, partial left, in front, partial 
-right and full right. Section~\ref{sec:eval-audio} describes the layout and 
+These regions are based on the angle of the object's location relative to the
+user. The five regions are defined as full left, partial left, in front, partial
+right and full right. Section~\ref{sec:eval-audio} describes the layout and
 development of the region system in greater detail.
 
 \subsubsection{Implementation Details}
