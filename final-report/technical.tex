@@ -39,41 +39,42 @@ or for different lighting or exposure conditions.
 \subsubsection{Operation}
 \label{sec:technical-dest-op}
 
-The destination detection works by first measuring the color of the destination
-object. This measurement can be performed on the fly, by placing the
+The destination detection component works with the user first performing a
+calibration step in which the color of the destination object is measured.
+This measurement can be performed on the fly, by placing the
 destination object in front of the camera, and then measuring the average 
 color within the center region of the image. Once the color of the destination
 object is known, we compute a similarity image where each pixel represents the 
-similarity of an input pixel's color to the measured destination color. Once 
+similarity of an input pixel's color to the measured destination object color. Once 
 this image is obtained, we binarize the pixel values by applying a 
 user-adjustable threshold. The result is a binary image like
 Figure~\ref{fig:destination}. A \emph{blob detection} algorithm is then run over the 
-binary image, which finds the largest connected components within the binary 
-image by treating it as an 8-connected graph. If multiple blobs are detected,
-we use the largest one. 
+binary image, which finds the largest connected components by treating it as an 
+8-connected graph. If multiple blobs are detected, the largest one is used.
 
 Since the blobs describe a pixel location in the image, we must now convert 
 this location into a real-world position relative to the camera. We take
 advantage of PCL~\cite{pcl-website}, which provides camera-relative XYZ coordinates
 for each pixel. We use this to compute the average XYZ position for pixels
-within the largest blob, which is returned as the final estimate of the location
+within the largest blob, which then is returned as the final estimate of the location
 of the destination object. 
 
 
 \subsubsection{Implementation Details}
 \label{sec:technical-dest-impl}
 
-The similarity metric we use treats all pixels as vectors in 3-space. In order
-to compute a final similarity value, we first normalize all pixel vectors
-to unit length. We then represent the difference between two pixels using the
+The similarity metric we use to compute the binary image in Figure~\ref{fig:destination}
+treats all pixels as vectors in 3-space. In order
+to compute a these similarity values, we first normalize all pixel vectors
+to have unit length. We then represent the difference between two pixels using the
 magnitude of their difference vector. For example, if \emph{c} is the color of a
-given pixel, and \emph{d} is the color of the destination, then this gives the difference
-\begin{math} \textit{diff} = c - d \end{math} and the similarity \begin{math}
-\textit{sim} = 1 - ||\textit{diff}|| \end{math}.
+given pixel, and \emph{d} is the color of the destination object, then this gives the 
+difference \begin{math} \textit{diff} = c - d \end{math} and the similarity 
+\begin{math}\textit{sim} = 1 - ||\textit{diff}|| \end{math}.
 
 In order to make the system more robust to noise, we apply a Gaussian blur
-filter to the similarity image with a relatively large kernel size, e.g.
-10 to 15 pixels in our application. Since the similarity computation tends
+filter to the similarity image. We found a filter kernel size of 10 to 15 to work 
+best for our application. Since the similarity computation tends
 to amplify the appearance of noise, and also because noise tends to
 negatively effect blob detection, this added step helps significantly increase
 the robustness of the component.
@@ -82,7 +83,7 @@ After computing a similarity image in this fashion, we binarize the image
 using a simple user-set threshold, and pass the binary image to the OpenCV~\cite{opencv-website}
 \emph{SimpleBlobDetector}. This routine reliably detects connected components
 within the image, but requires many parameters to be set properly, such as
-min/max blob size, convexity, and separation. After detecting blobs, the 
+minimum and maximum  blob size, convexity, and separation. After detecting blobs, the 
 largest blob is used to compute a centroid in 3-space using pixels belonging 
 to the blob.
 
