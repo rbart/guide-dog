@@ -1,7 +1,46 @@
-\section{Related Work (\textasciitilde 1 column)}
+\section{Related Work}
 \label{sec:related}
 
-Describe other research projects, commercial products, patents, etc that are
-related to your project and how they differ from your work. Also, if your
-work is based on previous techniques, describe them here. Should be about 1
-column.
+% Describe other research projects, commercial products, patents, etc that are
+% related to your project and how they differ from your work. Also, if your
+% work is based on previous techniques, describe them here. Should be about 1
+% column.
+
+The System for Wearable Audio Navigation (SWAN)~\cite{swan-website} is a project
+from the Sonification Lab at the Georgia Institute of Technology which aims to
+provide a system to help users find their way through an environment. This
+closely matches the goals the authors intended for Guide Dog. SWAN features an
+audio interface that uses beacons to guide a user to waypoints along a path
+determined by the system and object sounds to signal the location of different
+objects in the user's environment. Guide Dog's borrows these two concepts in the
+implementation of its own audio interface. See section
+\ref{sec:technical-audio-op} for further details on Guide Dog's audio system.
+Another major part of SWAN is the use of virtual reality to aid the development
+of its audio interface. The lab uses their virtual reality test environment to
+try out new features for SWAN. While developing Guide Dog, the authors emulated
+this strategy so that the audio interface could be developed in parallel with
+the other portions of Guide Dog.
+
+Where Guide Dog differs from SWAN is how it views and processes the outside
+world. SWAN consists of a lightweight computer and several sensors such as GPS,
+inertial sensors, pedometer, RFID tags, RF sensors, compass, and more. The
+information taken from those sensors and computer vision techniques are used to
+determine the user's location and orientation within his or her environment. On
+the other hand, Guide Dog uses only an RGB-D camera to get information about its
+environment and then uses well-known computer vision techniques to infer what is
+contained in the environment. Furthermore, Guide Dog cannot map out its
+environment and its hardware setup is not comfortably portable, which are
+features that SWAN provides.
+
+Guide Dog's obstacle detection feature is also similar to the project Kinecthesia
+\cite{kinecthesia-website}. This group created a belt with a mounted RGB-D
+camera to detect obstacles in front of a user's path. The belt uses vibration
+motors to alert the user to the location of obstacles. As the user gets closers
+to an obstacle, the intensity of the vibrations also get stronger. However, in
+Guide Dog, obstacle detection does not communicate distance to the user through
+the audio interface. The authors also discovered that Kinecthesia divides the
+scene into regions just like Guide Dog's audio interface. In the case of
+Kinecthesia, they mapped each region to a vibration motor on the belt whereas
+Guide Dog uses regions to better communicate the direction of objects through
+the audio interface. See section \ref{sec:eval-audio} for more details on Guide
+Dog's use of regions.
