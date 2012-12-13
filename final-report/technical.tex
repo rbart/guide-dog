@@ -281,23 +281,30 @@ source and goes back to pull more sources off the job queue or blocks if the
 queue is empty.
 
 The math used to place an object in a specific region is straightforward. Given
-the \emph{x} and \emph{z} coordinates of an object, SonicDog uses arctangent to 
-calculate the angle \begin{math}\theta\end{math} between the object and the 
-listener, and the Pythagorean theorem to calculate the distance \emph{d} from the
-object to the listener. In the five-region design, the middle is the arc 
-considered in front of the user and is between 85 and 95 degrees. When 
-\begin{math}85\leq\theta\leq95\end{math}, SonicDog sets the internal coordinates
-to \emph{(0, 0, d)} so that OpenAL plays a sound that appears as though it is 
-coming from in front of the user. If \begin{math}\theta>110\end{math}, SonicDog
-places the source at \emph{(-d, 0, 0)} because that region is considered the 
-hard left. For the 15 degree arcs representing the gradual left or right 
-regions, SonicDog uses the equation \begin{math}\phi=2\theta-140\end{math} to 
-place the source at angle \begin{math}\phi\end{math} in the OpenAL world, where 
-it ranges from being located at 0 to 35 degrees to either side of the listener. 
-The internal coordinates are then set as 
-\begin{math}(d\cos\phi, 0, d\sin\phi)\end{math}. Positioning the source in this
-manner emphasizes the sound on one side, but not
-completely in one ear.
+the \emph{x} and \emph{z} coordinates of an object, SonicDog uses arctangent to
+calculate the angle \begin{math}\theta\end{math} between the object and the
+listener, and the Pythagorean theorem to calculate the distance \emph{d} from
+the object to the listener. In the five-region design \ref{fig:regions}, the
+middle region is the arc considered in front of the user and is between 85 and
+95 degrees. When \begin{math}85\leq\theta\leq95\end{math}, SonicDog sets the
+internal coordinates to \emph{(0, 0, d)} so that OpenAL plays a sound that
+appears as though it is coming from in front of the user. If
+\begin{math}\theta>110\end{math}, SonicDog places the source at \emph{(-d, 0,
+0)} because that region is considered the complete left. A similar operation
+occurs for when \begin{math}\theta<70\end{math} and the object is on the
+complete right. For the 15 degree arcs representing the partial left or right
+regions, SonicDog uses the equation \begin{math}\phi=2\theta-140\end{math} to
+translate the source to an angle \begin{math}\phi\end{math} in the OpenAL world
+that is further left or right than the real world location in order to make the
+changes in stereo effect more audible to the user. The effect is that the user
+hears an emphasis of the sound in one ear instead of it being completely pushed
+to that ear. This tells the user that the object is only located slightly to the
+left or right instead it being ambiguous like in the three region design. As an
+example, an object appearing in the partial right region would appear as though
+it were located between 0 and 30 degrees to the right of the user, and the
+corresponding internal coordinates would be set to \begin{math}(d\cos\phi, 0,
+d\sin\phi)\end{math}. Section \ref{sec:eval-audio} goes into further details
+about the regions used by SonicDog.
 
 Since this is a multi-threaded system, the implementation required multiple
 locks to synchronize access to the maps inside SonicDog that keep track of what
