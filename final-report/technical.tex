@@ -217,7 +217,7 @@ Furthermore, the ding is clearly distinguishable from the beacon. Unlike the
 destination beacon, the user is expected to
 avoid the direction of the alert. Only obstacles that are within about five feet of the user get alerted.
 This strategy allows the user enough room to correct his or her course while 
-still be helpful. If the system alerted obstacles at any distance, there may be 
+still being helpful. If the system alerted obstacles at any distance, there may be 
 too many, which would overwhelm and confuse the user, or the ones that are 
 particularly far would cause the user to correct his route at times when the 
 path in front of him is actually clear.
@@ -238,7 +238,7 @@ development of the region system in greater detail.
 %(Some details on the software implementation.)
 The audio system is abstracted away from the other parts of Guide Dog and
 written as a class with member functions that the other systems can invoke. At 
-the core of this class, know as SonicDog, is OpenAL~\cite{openal-website}, which
+the core of this class, known as SonicDog, is OpenAL~\cite{openal-website}, which
 is an open source audio library typically used in video games to handle 3D
 sound. Devloping a separate class enabled quick development of the audio system 
 without affecting other parts of GuideDog because the clients only needed to be
@@ -283,7 +283,7 @@ queue is empty.
 The math used to place an object in a specific region is straightforward. Given
 the \emph{x} and \emph{z} coordinates of an object, SonicDog uses arctangent to 
 calculate the angle \begin{math}\theta\end{math} between the object and the 
-listener and the Pythagorean theorem to calculate the distance \emph{d} from the
+listener, and the Pythagorean theorem to calculate the distance \emph{d} from the
 object to the listener. In the five-region design, the middle is the arc 
 considered in front of the user and is between 85 and 95 degrees. When 
 \begin{math}85\leq\theta\leq95\end{math}, SonicDog sets the internal coordinates
