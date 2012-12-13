@@ -102,7 +102,7 @@ to the blob.
 \label{sec:technical-obs-overview}
 
 The second component of Guide Dog is the component to detect obstacles. This
-component must detect the obstacles nearby to the user and convey the obstacles'
+component must detect the obstacles near the user and convey the obstacles'
 locations to the audio interface. Only obstacles near the user are detected in
 order to avoid overwhelming the user. It is only important for the user to
 know if he or she is about to run into an obstacle, not if there is obstacle on the
@@ -124,7 +124,7 @@ The obstacle detection algorithm views the points in a format created by the
 Point Cloud Library (PCL)~\cite{pcl-website}. Each individual pixel viewed by
 the camera is represented by an X coordinate, Y coordinate, depth and RGB color.
 A data structure storing all of these points is called a ``point cloud'' and
-represents the whole 3D environment the camera can see.
+represents the whole 3D environment that the camera can see.
 
 The obstacle detection algorithm first looks at the point cloud and extracts the
 plane of the floor. PCL has a built-in planar segmentation library function that
@@ -150,7 +150,7 @@ are projected onto the floor plane. Then, the floor plane is rotated so that it
 is level. This provides a simple way to analyze the obstacles and calculate
 distances.
 
-Once the obstacles have been extracted and projected into a 2D space more
+Once the obstacles have been extracted and projected into a 2D space, more
 analysis is performed to detect their locations. The obstacles are processed
 into a black and white image: a white pixel means there is part of an obstacle
 at that location, a black pixel means that location is empty. An example of this
@@ -217,7 +217,7 @@ Furthermore, the ding is clearly distinguishable from the beacon. Unlike the
 destination beacon, the user is expected to
 avoid the direction of the alert. Only obstacles that are within about five feet of the user get alerted.
 This strategy allows the user enough room to correct his or her course while 
-still be helpful. If the system alerted obstacles at any distance, there may be 
+still being helpful. If the system alerted obstacles at any distance, there may be 
 too many, which would overwhelm and confuse the user, or the ones that are 
 particularly far would cause the user to correct his route at times when the 
 path in front of him is actually clear.
@@ -238,7 +238,7 @@ development of the region system in greater detail.
 %(Some details on the software implementation.)
 The audio system is abstracted away from the other parts of Guide Dog and
 written as a class with member functions that the other systems can invoke. At 
-the core of this class, know as SonicDog, is OpenAL~\cite{openal-website}, which
+the core of this class, known as SonicDog, is OpenAL~\cite{openal-website}, which
 is an open source audio library typically used in video games to handle 3D
 sound. Devloping a separate class enabled quick development of the audio system 
 without affecting other parts of GuideDog because the clients only needed to be
@@ -283,7 +283,7 @@ queue is empty.
 The math used to place an object in a specific region is straightforward. Given
 the \emph{x} and \emph{z} coordinates of an object, SonicDog uses arctangent to 
 calculate the angle \begin{math}\theta\end{math} between the object and the 
-listener and the Pythagorean theorem to calculate the distance \emph{d} from the
+listener, and the Pythagorean theorem to calculate the distance \emph{d} from the
 object to the listener. In the five-region design, the middle is the arc 
 considered in front of the user and is between 85 and 95 degrees. When 
 \begin{math}85\leq\theta\leq95\end{math}, SonicDog sets the internal coordinates
