@@ -19,7 +19,7 @@ of the destination object, diffuse reflection, and differences in lighting
 (even between two places in the same room) were factors that could lead
 to a failure to detect the destination object. 
 
-To migitage these issues, the authors experimented with different similarity
+To mitigate these issues, the authors experimented with different similarity
 metrics, blob detection, and different colors and shapes for the destination
 object. In addition to the similarity metric described in 
 Section~\ref{sec:technical-dest-impl}, the authors also tried using
@@ -29,7 +29,7 @@ allowed the system to detect the destination object under normal variation
 in room lighting. The authors also experimented with various colors and
 shapes for the destination object, and found that an object with a rounded
 face (such as a cylinder or ball) helped to reduce the effect of diffuse
-reflections. This lead to the use of a coffee can wrapped with matte pink paper
+reflections. This led to the use of a coffee can wrapped with matte pink paper
 as the final destination object. With these improvements, the system was able 
 to reliably detect the destination under normal indoor lighting conditions.
 
@@ -70,7 +70,7 @@ small areas of noise that weren't actually obstacles. Further, since the blob
 detection clumps together contiguous areas, there is no concern of erroneously
 identifying a single physical obstacle as multiple obstacles.
 
-One current issue the obstacle detection component is when it fails to
+One current issue with the obstacle detection component is when it fails to
 detect the ground plane. The planar segmentation algorithm the obstacle
 detection component uses doesn't actually detect the ground, it detects the
 largest plane in view. Often times, this will be the ground. However, if the
@@ -102,11 +102,11 @@ user.
 
 \begin{figure}
 \includeimage{vsim.pdf}{6cm}{bb=0 0 371 371}
-\caption{A program to simulate the expected functionality of Guide Dog, which
-was used to aid development of the audio system. The user is represented by the
-while box, the destination the pink box, and obstacles are the green boxes. The
-user could move around in the environment and interact with the audio
-interface.}
+\caption{A screen shot of a program to simulate the expected functionality of
+Guide Dog, which was used to aid development of the audio system. The user is
+represented by the white box, the destination by the pink box, and the obstacles
+by the green boxes. The user moves around in the environment and interacts with
+the audio interface.}
 \label{fig:vsim}
 \end{figure}
 
@@ -121,12 +121,12 @@ the user instead.
 To aid development of the audio system, the authors created a program to
 simulate Guide Dog's functionality. It began as a terminal program with no
 visual output that enabled the user to blindly traverse the landscape while
-following the beacon and avoiding obstacles. Later on, a new simulator with 
-visual output was created based off the tutorial by~\cite{openal-tutorial} using
-OpenGL~\cite{opengl-website}. Figure~\ref{fig:vsim} gives a description of the 
-\emph{vsim} program. With it, the authors could test what strategies worked and
-verify that any calculations made in SonicDog were correct independent of the
-other systems in Guide Dog.
+following the beacon and avoiding obstacles. Later on, a new
+OpenGL~\cite{opengl-website} based simulator with visual output was created
+based off of an OpenAL tutorial~\cite{openal-tutorial}.  Figure~\ref{fig:vsim}
+gives a description of the \emph{vsim} program. With it, the authors could test
+what strategies worked and verify that any calculations made in SonicDog were
+correct independent of the other systems in Guide Dog.
 
 \begin{figure}
 \includeimage{regions.pdf}{6cm}{bb=0 0 600 450}
@@ -160,35 +160,35 @@ the full left or right. Thus, if an object is to the right of the middle region,
 the user only hears sound in the right ear and vice versa for objects in the 
 left region. When finding the destination, the user can position the destination 
 in front and walk forward. If the user is actually off-center from the object in 
-real life, the destination will eventually fall to the left or right as the user 
-gets closer, which then forces the user to rotate and reposition in the 
-middle. However, this strategy appeared limited since it only communicates 
-three directions. Thus, the second strategy tried to improve upon this.
+real life, the destination will eventually fall to the left or right as the user
+gets closer, which then forces the user to rotate and reposition the destination
+in the middle. However, this strategy appeared limited since it only
+communicated three directions. Thus, the second strategy tried to improve upon
+this.
 
 In the second iteration on regions, the audio system divided the field of view
 into five regions in an attempt to get finer directional sound. This time, the
 middle 10 degrees was devoted to the front. The 15 degree arcs to each side of
-the middle indicates a partial left or right direction and the final 9 degrees
-represent a complete left or right. The front and complete left or right regions
-function in the same manner as the first design, but the 15 degree arcs are
+the middle indicate a partial left or right direction and the final 9 degrees
+represent a complete left or right. The front and complete left or right regions 
+function in the same manner as the first design, but the 15 degree arcs are 
 devoted to a partial representation of left or right. For instance, as the
 location of an object sweeps to the right through the partial right region, the 
 weight of the sound playing in the right ear slowly increases while the sound in
 the left ear is slowly decreases. Compared to the first design, this strategy
 gives the user a better sense of slight changes in an object's direction. Though
 it is easier with this design, the user must still listen carefully for the
-shifts in stereo. But this is still better than the first version since the
-complete left and right regions are there to give a clear indication of
-direction should the user rotate too far away from the object. Aside from
-improving the quality of directions, the authors also sought out pleasant sound
-cues.
+shifts in stereo sound. But this is still better than the first version since the
+complete left and right regions are there to give a clear indication of direction
+should the user rotate too far away from the object. Aside from improving the
+quality of directions, the authors also sought out pleasant sound cues.
 
 Because audio is the primary means for users to interact with Guide Dog, it
 needed a set of sound cues that would sound pleasant to the user and not become
-annoying over time. The earliest implementation of the audio system used a white
-noise tone as the beacon and sine wave tone to alert obstacles because OpenAL
-could conveniently generate those tones. However, both proved to be far too
-abrasive and were discarded. The next attempts were great improvements.
+annoying over time. The earliest implementation of the audio system used a
+white noise tone as the beacon and a sine wave tone to alert obstacles because
+OpenAL could conveniently generate these tones. However, both proved to be far
+too abrasive and were discarded. The next attempts were great improvements.
 
 In finding a good sound for the beacon, the authors wanted to emulate the sonar
 sound from a submarine that one typically hears in movies. The second attempt
@@ -216,9 +216,8 @@ obstacles located to the complete left or right of the user. The user is told to
 steer away from obstacles, but in practice, most obstacles that are alerted to the
 left or right of the user do not obstruct his or her path if he or she continues
 to walk forward. Thus, narrow walkways were often ignored. It was too confusing
-to instruct the user to take heed of obstacle alerts to the side while avoid
-the ones in front since the audio system used the same ding for both. Thus, the
+to instruct the user to take heed of obstacle alerts to the side while avoiding
+the ones in front, since the audio system used the same ding for both. Thus, the
 authors tried turning off obstacles to the sides, which in practiced allowed
 users to walk through narrow spaces. However, this is an area of the audio
 system that needs further development.
-

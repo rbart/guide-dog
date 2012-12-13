@@ -39,7 +39,7 @@ or for different lighting or exposure conditions.
 \subsubsection{Operation}
 \label{sec:technical-dest-op}
 
-The destination detection component works with the user first performing a
+To set up the destination detection component the user must first perform a
 calibration step in which the color of the destination object is measured.
 This measurement can be performed on the fly, by placing the
 destination object in front of the camera, and then measuring the average 
@@ -65,7 +65,7 @@ of the destination object.
 
 The similarity metric we use to compute the binary image in Figure~\ref{fig:destination}
 treats all pixels as vectors in 3-space. In order
-to compute a these similarity values, we first normalize all pixel vectors
+to compute these similarity values, we first normalize all pixel vectors
 to have unit length. We then represent the difference between two pixels using the
 magnitude of their difference vector. For example, if \emph{c} is the color of a
 given pixel, and \emph{d} is the color of the destination object, then this gives the 
@@ -240,7 +240,7 @@ The audio system is abstracted away from the other parts of Guide Dog and
 written as a class with member functions that the other systems can invoke. At 
 the core of this class, known as SonicDog, is OpenAL~\cite{openal-website}, which
 is an open source audio library typically used in video games to handle 3D
-sound. Devloping a separate class enabled quick development of the audio system 
+sound. Developing a separate class enabled quick development of the audio system
 without affecting other parts of GuideDog because the clients only needed to be
 concerned with inputting the correct and consistent coordinates of objects in 
 the scene.
@@ -296,7 +296,7 @@ place the source at angle \begin{math}\phi\end{math} in the OpenAL world, where
 it ranges from being located at 0 to 35 degrees to either side of the listener. 
 The internal coordinates are then set as 
 \begin{math}(d\cos\phi, 0, d\sin\phi)\end{math}. Positioning the source in this
-manner enabled an emphasis of the sound being played toward one side, but not 
+manner emphasizes the sound on one side, but not
 completely in one ear.
 
 Since this is a multi-threaded system, the implementation required multiple
@@ -305,4 +305,3 @@ objects have been registered to it. In addition, condition variables are used to
 synchronize the job queue. These allow for a thread to be blocked and not use 
 system resources when the queue is empty and for broadcasts to wake up threads 
 when the queue becomes non-empty.
-
